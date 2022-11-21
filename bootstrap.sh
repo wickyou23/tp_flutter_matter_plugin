@@ -12,7 +12,7 @@ curl https://www.dropbox.com/s/ppat6qvtet0m4i1/TPMatter.xcframework.v1.0.0.zip -
 
 unzip $IOS_CHIP_LIBRARY_NAME
 
-cp -R "chip-library-v1.0.0" "../android/libs/"
-cp -R "TPMatter.xcframework" "../ios/Frameworks/"
+cp -R "chip-library-v1.0.0" "../android/libs/chip-library-v1.0.0"
+cp -R "TPMatter.xcframework" "../ios/Frameworks/TPMatter.xcframework"
 
 cd "../" && rm -rf "unzip"
