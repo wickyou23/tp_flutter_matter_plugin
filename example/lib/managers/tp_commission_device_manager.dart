@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:tp_flutter_matter_package/models/tp_setup_payload.dart';
 import 'package:tp_flutter_matter_package/tp_flutter_matter_package.dart';

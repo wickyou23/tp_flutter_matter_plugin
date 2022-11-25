@@ -55,7 +55,7 @@ enum TPDeviceType {
 
 class TPDevice {
   TPDevice(this.deviceId, this.deviceName, this.deviceType, this.createdDate,
-      this.isOn);
+      this.endpoint, this.subDevices, this.isOn);
 
   TPDevice.fromJson(Map json)
       : deviceId = json['deviceId'] as String,
@@ -65,14 +65,9 @@ class TPDevice {
         createdDate = json.containsKey('createdDate')
             ? DateTime.fromMillisecondsSinceEpoch(json['createdDate'] as int)
             : DateTime.now(),
-        isOn = json['isOn'] as bool? ?? false;
-
-  final String deviceId;
-  final String deviceName;
-  final TPDeviceType deviceType;
-  final DateTime createdDate;
-
-  bool isOn;
+        endpoint = json['endpoint'] as int? ?? 0,
+        isOn = json['isOn'] as bool? ?? false,
+        subDevices = TPDevice.getSubDevicesByDeviceTypes(json);
 
   static TPDevice getDeviceByType(Map json) {
     final deviceType =
@@ -85,12 +80,36 @@ class TPDevice {
     }
   }
 
+  static Map<TPDeviceType, TPDevice> getSubDevicesByDeviceTypes(Map json) {
+    Map<TPDeviceType, TPDevice> subDevices = {};
+    final subDeviceListJson =
+        (json['subDevices'] as List?)?.map((e) => e as Map) ?? [];
+    for (var subDeviceJson in subDeviceListJson) {
+      final subDevice = TPDevice.fromJson(subDeviceJson);
+      subDevices.update(subDevice.deviceType, (value) => subDevice,
+          ifAbsent: () => subDevice);
+    }
+
+    return subDevices;
+  }
+
+  final String deviceId;
+  final String deviceName;
+  final TPDeviceType deviceType;
+  final DateTime createdDate;
+  final int endpoint;
+  final Map<TPDeviceType, TPDevice> subDevices;
+
+  bool isOn;
+
   Map<String, dynamic> toJson() {
     return {
       'deviceId': deviceId,
       'deviceName': deviceName,
       'deviceType': deviceType.value,
       'createdDate': createdDate.millisecondsSinceEpoch,
+      'subDevices': subDevices.values.map((e) => e.toJson()).toList(),
+      'endpoint': endpoint,
       'isOn': isOn,
     };
   }

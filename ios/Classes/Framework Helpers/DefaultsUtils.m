@@ -24,6 +24,7 @@ NSString * const kNetworkPasswordDefaultsKey = @"networkPassword";
 NSString * const MTRNextAvailableDeviceIDKey = @"nextDeviceID";
 NSString * const kFabricIdKey = @"fabricId";
 NSString * const kDevicePairedKey = @"Paired";
+NSString * const kEndpointsKey = @"Endpoints";
 
 id MTRGetDomainValueForKey(NSString * domain, NSString * key)
 {
@@ -64,6 +65,26 @@ void MTRSetNextAvailableDeviceID(uint64_t id)
 {
     MTRSetDomainValueForKey(MTRToolDefaultsDomain, MTRNextAvailableDeviceIDKey, [NSNumber numberWithUnsignedLongLong:id]);
 }
+
+//void MTRSetEndpointsByDeviceId(uint64_t deviceId, NSArray* endpoints)
+//{
+//    MTRSetDomainValueForKey(MTRToolDefaultsDomain, KeyForEndpointsDevice(deviceId), endpoints);
+//}
+//
+//void MTRRemoveEndpointsByDeviceId(uint64_t deviceId)
+//{
+//    MTRRemoveDomainValueForKey(MTRToolDefaultsDomain, KeyForEndpointsDevice(deviceId));
+//}
+//
+//NSArray* MTRGetEndpointsByDeviceId(uint64_t deviceId)
+//{
+//    NSArray *endpoint = MTRGetDomainValueForKey(MTRToolDefaultsDomain, KeyForEndpointsDevice(deviceId));
+//    if (endpoint) {
+//        return endpoint;
+//    }
+//
+//    return [NSArray array];
+//}
 
 static CHIPToolPersistentStorageDelegate * storage = nil;
 
@@ -171,10 +192,16 @@ BOOL MTRIsDevicePaired(uint64_t deviceId)
 
 void MTRSetDevicePaired(uint64_t deviceId, BOOL paired)
 {
+//    if (!paired) {
+//        MTRRemoveEndpointsByDeviceId(deviceId);
+//    }
+    
     MTRSetDomainValueForKey(MTRToolDefaultsDomain, KeyForPairedDevice(deviceId), paired ? @"YES" : @"NO");
 }
 
 NSString * KeyForPairedDevice(uint64_t deviceId) { return [NSString stringWithFormat:@"%@%llu", kDevicePairedKey, deviceId]; }
+
+NSString * KeyForEndpointsDevice(uint64_t deviceId) { return [NSString stringWithFormat:@"%@%llu", kEndpointsKey, deviceId]; }
 
 void MTRUnpairDeviceWithID(uint64_t deviceId)
 {

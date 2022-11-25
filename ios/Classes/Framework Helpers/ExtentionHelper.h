@@ -18,6 +18,17 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+//MARK: - MTRBaseDevice+Ext
+
+@interface MTRBaseDevice(Ext)
+
+- (void)getEndpointByClusterId:(NSNumber*)clusterId
+         andAvailableEndpoints:(NSMutableArray*)endpoints
+                      andQueue:(dispatch_queue_t)queue
+                 andCompletion:(void(^)(NSNumber* _Nullable))completion;
+
+@end
+
 //MARK: - MTRPayload+Ext
 
 @interface MTRSetupPayload(Ext)

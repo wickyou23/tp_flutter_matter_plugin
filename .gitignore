@@ -126,7 +126,5 @@ app.*.symbols
 !/dev/ci/**/Gemfile.lock
 
 # Fastlane
-**/ios/fastlane/README.md
-**/ios/fastlane/report.xml
-**/android/fastlane/README.md
-**/android/fastlane/report.xml
+**/ios/Frameworks/*
+**/android/libs/*

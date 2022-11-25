@@ -43,7 +43,9 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
 
 @end
 
-@implementation TPCommissionChannel
+@implementation TPCommissionChannel {
+    dispatch_queue_t comissionQueue;
+}
 
 + (void)registerWithRegistrar:(nonnull NSObject<FlutterPluginRegistrar> *)registrar {
     FlutterMethodChannel* channel = [FlutterMethodChannel
@@ -59,6 +61,7 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
 
 - (instancetype)init {
     if (self = [super init]) {
+        comissionQueue = dispatch_queue_create("com.csa.matter.commission", DISPATCH_QUEUE_SERIAL);
         dispatch_queue_t callbackQueue = dispatch_queue_create("com.csa.matter.commission.callback", DISPATCH_QUEUE_SERIAL);
         _chipController = InitializeMTR();
         [_chipController setDeviceControllerDelegate:self queue:callbackQueue];
@@ -81,7 +84,7 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
         _dataset = [datasetHex dataFromHexString];
         
         NSString* qrCode = args[@"qrCode"];
-        result(@([self startCommissionByQRCode:qrCode]));
+        result(@([self startThreadCommission]));
     }
     else if ([@"startCommissionByQRCode" isEqualToString:call.method]) {
         NSDictionary* args = (NSDictionary*)call.arguments;
@@ -97,14 +100,14 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
 {
     if ([address length] == 0 || [qrCode length] == 0) {
         NSLog(@"Address, discriminator, or pincode was empty");
-        return FALSE;
+        return NO;
     }
     
     NSError* error = NULL;
     MTRSetupPayload* payload = [MTRSetupPayload setupPayloadWithOnboardingPayload:qrCode error:&error];
     if (error != NULL) {
         NSLog(@"[Error] MTRSetupPayload: %@", [error localizedDescription]);
-        return FALSE;
+        return NO;
     }
     else {
         NSLog(@"MTRSetupPayload: %@", payload);
@@ -119,7 +122,7 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
 {
     if ([address length] == 0 || [discriminator length] == 0 || [pincode length] == 0) {
         NSLog(@"Address, discriminator, or pincode was empty");
-        return FALSE;
+        return NO;
     }
     
     [self restartMatterStack];
@@ -136,29 +139,32 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
     {
         deviceId++;
         MTRSetNextAvailableDeviceID(deviceId);
-        return TRUE;
+        return YES;
     }
     else {
-        return FALSE;
+        return NO;
     }
 }
 
-- (void)startThreadCommission {
+- (BOOL)startThreadCommission {
     if (_dataset == NULL) {
         [self sendErrorEventSink:@"Cannot found dataset"];
-        return;
+        return NO;
     }
-
+    
     NSError * error = NULL;
     MTRCommissioningParameters * params = [[MTRCommissioningParameters alloc] init];
     params.threadOperationalDataset = _dataset;
     params.failSafeExpiryTimeout = @600;
-
+    
     uint64_t deviceId = MTRGetLastPairedDeviceId();
     if (![_chipController commissionNodeWithID:@(deviceId) commissioningParams:params error:&error]) {
         NSLog(@"Failed to commission Device %llu, with error %@", deviceId, error);
         [self sendErrorEventSink:[error localizedDescription]];
+        return NO;
     }
+    
+    return YES;
 }
 
 - (BOOL)startCommissionByQRCode:(NSString*)qrcode {
@@ -182,7 +188,7 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
         if (!tag) {
             continue;
         }
-
+        
         BOOL isTypeString = (info.infoType == MTROptionalQRCodeInfoTypeString);
         if (!isTypeString) {
             return;
@@ -205,20 +211,20 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
         NSLog(@"Rendezvous Default");
         return [self handleRendezVousDefault:rawPayload];
     }
-
+    
     // Avoid SoftAP if we have other options.
     if ((payload.discoveryCapabilities & MTRDiscoveryCapabilitiesOnNetwork)
         || (payload.discoveryCapabilities & MTRDiscoveryCapabilitiesBLE)) {
         NSLog(@"Rendezvous Default");
         return [self handleRendezVousDefault:rawPayload];
     }
-
+    
     if (payload.discoveryCapabilities & MTRDiscoveryCapabilitiesSoftAP) {
         NSLog(@"Rendezvous Wi-Fi");
-//        [self handleRendezVousWiFi:[self getNetworkName:payload.discriminator]];
-        return FALSE;
+        //        [self handleRendezVousWiFi:[self getNetworkName:payload.discriminator]];
+        return NO;
     }
-
+    
     // Just fall back on the default.
     NSLog(@"Rendezvous Default");
     return [self handleRendezVousDefault:rawPayload];
@@ -230,20 +236,20 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
     uint64_t deviceID = MTRGetNextAvailableDeviceID() + arc4random_uniform(50);
     
     [self restartMatterStack];
-
+    
     __auto_type * setupPayload = [MTRSetupPayload setupPayloadWithOnboardingPayload:payload error:&error];
     if (setupPayload == nil) {
         NSLog(@"Could not parse setup payload: %@", [error localizedDescription]);
-        return FALSE;
+        return NO;
     }
-
+    
     if ([self.chipController setupCommissioningSessionWithPayload:setupPayload newNodeID:@(deviceID) error:&error]) {
         deviceID++;
         MTRSetNextAvailableDeviceID(deviceID);
-        return TRUE;
+        return YES;
     } else {
         NSLog(@"Could not start commissioning session setup: %@", [error localizedDescription]);
-        return FALSE;
+        return NO;
     }
 }
 
@@ -334,36 +340,112 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
 - (void)setVendorIDOnAccessory
 {
     NSLog(@"Call to setVendorIDOnAccessory");
+    __weak typeof(self) weakSelf = self;
     BOOL isConnected = MTRGetConnectedDevice(^(MTRBaseDevice * _Nullable device, NSError * _Nullable error) {
-        if (!device) {
+        if (device == NULL) {
             NSLog(@"Status: Failed to establish a connection with the device");
             [self sendCommissionSuccessEventSink: @{@"message": @"Status: Failed to establish a connection with the device"}];
+            return;
         }
         
-        MTRBaseClusterDescriptor* descriptor = [[MTRBaseClusterDescriptor alloc] initWithDevice:device
-                                                                                       endpoint:@(1)
-                                                                                          queue:dispatch_get_main_queue()];
-        [descriptor readAttributeDeviceTypeListWithCompletion:^(NSArray * _Nullable value, NSError * _Nullable error) {
-            if (error == NULL) {
-                uint64_t lastId = MTRGetLastPairedDeviceId();
-                NSLog(@"Device attributes of %llu: %@", lastId, value);
-                MTRDescriptorClusterDeviceTypeStruct* deviceTypeStruct = (MTRDescriptorClusterDeviceTypeStruct*)[value firstObject];
-                TPDevice *device = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue] andDeviceType:[deviceTypeStruct.type longLongValue]];
-                [self sendCompletetedCommissionEventSink:@{
-                    @"message": @"Status: Waiting for connection with the device",
-                    @"data": [device convertToDict]
-                }];
+        MTRDeviceResponseHandler readAttributeCompletion = ^(NSArray<NSDictionary<NSString *,id> *> * _Nullable values, NSError * _Nullable error) {
+            typeof(self) strongSelf = weakSelf;
+            NSMutableArray<MTRAttributePath*> *endpoints = [NSMutableArray array];
+            for (NSMutableDictionary *mainDict in values) {
+                MTRAttributePath* attributePath = [mainDict objectForKey:@"attributePath"];
+                [endpoints addObject:attributePath];
             }
-            else {
-                [self sendCommissionSuccessEventSink: @{@"message": @"Status: Waiting for connection with the device"}];
+            
+            NSLog(@"[Comission][attributePath]: %@", values);
+            if (endpoints.count == 0) {
+                NSLog(@"Device endpoints not found");
+                [self sendCommissionSuccessEventSink: @{@"message": @"Device endpoints not found"}];
+                return;
             }
-        }];
+            
+            [strongSelf getDeviceTypeWithBaseDevice:device andEndpoint:endpoints];
+        };
+        
+        typeof(self) strongSelf = weakSelf;
+        [device readAttributePathWithEndpointID:NULL
+                                      clusterID:@(MTRClusterIDTypeDescriptorID)
+                                    attributeID:@(MTRAttributeIDTypeClusterDescriptorAttributePartsListID)
+                                         params:NULL
+                                          queue:strongSelf->comissionQueue
+                                     completion:readAttributeCompletion];
     });
     
     if (!isConnected) {
         NSLog(@"Status: Failed to trigger the connection with the device");
         [self sendCommissionSuccessEventSink:@{@"message": @"Status: Failed to trigger the connection with the device"}];
     }
+}
+
+- (void)getDeviceTypeWithBaseDevice:(MTRBaseDevice*)device andEndpoint:(NSArray*)attributePaths {
+    __block TPDevice* tpDevice;
+    __block NSError* anyError;
+    __block NSMutableArray* subDevices = [NSMutableArray array];
+    __weak typeof(self) weakSelf = self;
+    [attributePaths enumerateObjectsUsingBlock:^(MTRAttributePath*  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        typeof(self) strongSelf = weakSelf;
+        if (anyError != NULL) {
+            [strongSelf sendCommissionSuccessEventSink: @{@"message": @"Status: Waiting for connection with the device"}];
+            *stop = YES;
+            return;
+        }
+        
+        if ([obj.endpoint intValue] == 0) {
+            NSLog(@"Skip endpoint 0");
+            return;
+        }
+        
+        MTRBaseClusterDescriptor* descriptor = [[MTRBaseClusterDescriptor alloc] initWithDevice:device
+                                                                                       endpoint:obj.endpoint
+                                                                                          queue:strongSelf->comissionQueue];
+        [descriptor readAttributeDeviceTypeListWithCompletion:^(NSArray * _Nullable value, NSError * _Nullable error) {
+            anyError = error;
+            if (error != NULL) {
+                return;
+            }
+            
+            typeof(self) strongSelf = weakSelf;
+            uint64_t lastId = MTRGetLastPairedDeviceId();
+            NSLog(@"Device attributes of %llu: %@", lastId, value);
+            MTRDescriptorClusterDeviceTypeStruct* deviceTypeStruct = (MTRDescriptorClusterDeviceTypeStruct*)[value firstObject];
+            if (idx == attributePaths.count - 1) {
+                if (tpDevice == NULL) {
+                    tpDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
+                                                      andEndpoint:obj.endpoint
+                                                    andDeviceType:[deviceTypeStruct.type longLongValue]];
+                }
+                else {
+                    TPDevice* subDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
+                                                                 andEndpoint:obj.endpoint
+                                                               andDeviceType:[deviceTypeStruct.type longLongValue]];
+                    [subDevices addObject:subDevice];
+                }
+                
+                [tpDevice addSubDevices:subDevices];
+                [strongSelf sendCompletetedCommissionEventSink:@{
+                    @"message": @"Status: Waiting for connection with the device",
+                    @"data": [tpDevice convertToDict]
+                }];
+            }
+            else {
+                if (tpDevice == NULL) {
+                    tpDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
+                                                      andEndpoint:obj.endpoint
+                                                    andDeviceType:[deviceTypeStruct.type longLongValue]];
+                }
+                else {
+                    TPDevice* subDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
+                                                                 andEndpoint:obj.endpoint
+                                                               andDeviceType:[deviceTypeStruct.type longLongValue]];
+                    [subDevices addObject:subDevice];
+                }
+            }
+        }];
+    }];
 }
 
 //MARK: - MTRDeviceAttestationDelegate

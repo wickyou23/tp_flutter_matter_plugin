@@ -6,6 +6,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <TPMatter/Matter.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -29,9 +30,19 @@ typedef NS_ENUM(uint16_t, TPDeviceType) {
 
 @property (nonatomic, strong) NSString* deviceId;
 @property (nonatomic, assign) TPDeviceType deviceType;
+@property (nonatomic, strong) NSArray* subDevices;
+@property (nonatomic, strong) NSNumber* endpoint;
 
-- (instancetype)initWithDeviceId:(NSString*)deviceId andDeviceType:(uint16_t)deviceType;
+//@property (nonatomic, strong) NSMutableArray* subDeviceTypes;
+//@property (nonatomic, strong) NSArray<NSNumber*>* endpoints;
+
+- (instancetype)initWithDeviceId:(NSString*)deviceId andEndpoint:(NSNumber*)endpoint andDeviceType:(uint16_t)deviceType;
 - (NSDictionary*)convertToDict;
+- (void)addSubDevices:(NSArray*)subDevices;
+
+//- (instancetype)initWithDeviceId:(NSString*)deviceId andDeviceType:(uint16_t)deviceType;
+//- (void)addSubDeviceType:(TPDeviceType)deviceType;
+//- (void)addEndpoints:(NSArray<NSNumber*>*)endpoins;
 
 @end
 

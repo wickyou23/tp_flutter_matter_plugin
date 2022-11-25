@@ -78,8 +78,8 @@ class TPDeviceManager {
         syncDevices.update(deviceId, (value) => mapDevices[deviceId],
             ifAbsent: () => mapDevices[deviceId]);
       } else {
-        final newDevice = TPDevice(
-            deviceId, deviceId, TPDeviceType.kUnknown, DateTime.now(), false);
+        final newDevice = TPDevice(deviceId, deviceId, TPDeviceType.kUnknown,
+            DateTime.now(), 0, {}, false);
         syncDevices.update(
           deviceId,
           (value) => newDevice.toJson(),
@@ -90,7 +90,11 @@ class TPDeviceManager {
 
     syncDevices.forEach((key, value) {
       final device = TPDevice.getDeviceByType(value);
-      device.subscribeDevice();
+      try {
+        device.subscribeDevice();
+      } catch (e) {
+        debugPrint(e.toString());
+      }
 
       _mapDevices.update(key, (_) => device, ifAbsent: () => device);
       _mapDeviceValues.update(
@@ -115,9 +119,16 @@ class TPDeviceManager {
 
     if (deviceValue == null) return;
 
-    if (event is TPLightbudEventSuccess) {
+    if (event is TPLightbudDimmerEventSuccess) {
       final device = deviceValue.value as TPLightbulbDimmer;
-      deviceValue.value = device.copyWith(isOn: event.isOn);
+      deviceValue.value = device.copyWith(
+        isOn: event.isOn,
+        level: event.level,
+        temperatureColor: event.temperatureColor,
+        hue: event.hue,
+        saturation: event.saturation,
+        sensorDetected: event.sensorDetected,
+      );
     }
   }
 
@@ -143,6 +154,16 @@ extension TPDeviceExt on TPDevice {
       return device.isOn ? 'On' : 'Off';
     } else {
       return '';
+    }
+  }
+
+  AssetImage getSensorIcon() {
+    final device = this;
+    if (device is TPLightbulbDimmer) {
+      return AssetImage(
+          'resources/images/s_sensor_${device.sensorDetected ? 'on' : 'off'}.png');
+    } else {
+      return const AssetImage('resources/images/unknown_device.png');
     }
   }
 }

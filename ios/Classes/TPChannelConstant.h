@@ -14,7 +14,7 @@ extern NSString* const TPDeviceChannelDomain;
 extern NSString* const TPCommissionChannelDomain;
 extern NSString* const TPCommissionEventChannelDomain;
 
-extern NSString* const TPLightbuldEventChannelDomain;
-extern NSString* const TPLightbuldChannelDomain;
+extern NSString* const TPLightbuldDimmerEventChannelDomain;
+extern NSString* const TPLightbuldDimmerChannelDomain;
 
 NS_ASSUME_NONNULL_END

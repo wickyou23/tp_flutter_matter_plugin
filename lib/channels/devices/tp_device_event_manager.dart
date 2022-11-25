@@ -6,17 +6,34 @@ abstract class TPDeviceEvent {
   TPDeviceEvent(this.deviceId);
 }
 
-class TPLightbudEventSuccess extends TPDeviceEvent {
-  final bool isOn;
-
-  TPLightbudEventSuccess(super.deviceId, this.isOn);
-}
-
 class TPDeviceEventError extends TPDeviceEvent {
   final String errorMessage;
 
   TPDeviceEventError(super.deviceId, this.errorMessage);
 }
+
+//TPLightbudDimmerEventSuccess
+
+class TPLightbudDimmerEventSuccess extends TPDeviceEvent {
+  final bool? isOn;
+  final int? level;
+  final int? temperatureColor;
+  final int? hue;
+  final int? saturation;
+  final bool? sensorDetected;
+
+  TPLightbudDimmerEventSuccess(
+    super.deviceId, {
+    this.isOn,
+    this.level,
+    this.temperatureColor,
+    this.hue,
+    this.saturation,
+    this.sensorDetected,
+  });
+}
+
+//TPDeviceEventManager
 
 class TPDeviceEventManager {
   static final shared = TPDeviceEventManager._internal();

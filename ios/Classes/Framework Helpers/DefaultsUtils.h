@@ -34,6 +34,7 @@ BOOL MTRSetDomainValueForKey(NSString * domain, NSString * key, id _Nullable val
 void MTRRemoveDomainValueForKey(NSString * domain, NSString * key);
 uint64_t MTRGetNextAvailableDeviceID(void);
 NSString * KeyForPairedDevice(uint64_t id);
+NSString * KeyForEndpointsDevice(uint64_t deviceId);
 uint64_t MTRGetLastPairedDeviceId(void);
 void MTRSetNextAvailableDeviceID(uint64_t id);
 void MTRSetDevicePaired(uint64_t id, BOOL paired);
@@ -42,6 +43,10 @@ BOOL MTRGetConnectedDevice(DeviceConnectionCallback completionHandler);
 BOOL MTRGetConnectedDeviceWithID(uint64_t deviceId, DeviceConnectionCallback completionHandler);
 void MTRUnpairDeviceWithID(uint64_t deviceId);
 MTRBaseDevice * _Nullable MTRGetDeviceBeingCommissioned(void);
+
+//void MTRSetEndpointsByDeviceId(uint64_t deviceId, NSArray* endpoints);
+//void MTRRemoveEndpointsByDeviceId(uint64_t deviceId);
+//NSArray* MTRGetEndpointsByDeviceId(uint64_t deviceId);
 
 @interface CHIPToolPersistentStorageDelegate : NSObject <MTRStorage>
 - (nullable NSData *)storageDataForKey:(NSString *)key;

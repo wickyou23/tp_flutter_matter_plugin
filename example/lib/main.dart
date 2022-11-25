@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:enough_platform_widgets/enough_platform_widgets.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb_dimmer.dart';
@@ -10,6 +12,8 @@ import 'package:tp_flutter_matter_package_example/custom_widgets/TPCupertinoSliv
 import 'package:tp_flutter_matter_package_example/custom_widgets/tp_paring_device_widget.dart';
 import 'package:tp_flutter_matter_package_example/datas/tp_device_manager.dart';
 import 'package:tp_flutter_matter_package_example/datas/tp_storage_data.dart';
+import 'package:tp_flutter_matter_package_example/custom_widgets/device_widgets/tp_device_widget.dart';
+import 'package:tp_flutter_matter_package_example/custom_widgets/device_widgets/tp_lightbulb_dimmer_widget.dart';
 import 'package:tp_flutter_matter_package_example/managers/tp_commission_device_manager.dart';
 
 void main() {
@@ -139,7 +143,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  Future<dynamic> showDeviceActions(TPDevice device) {
+  Future<dynamic> _showDeviceActions(TPDevice device) {
     return showCupertinoModalPopup(
       context: context,
       // shape: const RoundedRectangleBorder(
@@ -187,7 +191,10 @@ class _MyAppState extends State<MyApp> {
       builder: (_, device, __) {
         return GestureDetector(
           onTap: () {
-            showDeviceActions(device);
+            _showDeviceDetails(deviceValue);
+          },
+          onLongPress: () {
+            _showDeviceActions(device);
           },
           onDoubleTap: () {
             if (device is TPLightbulbDimmer) {
@@ -217,40 +224,47 @@ class _MyAppState extends State<MyApp> {
                   ? Colors.orange[100]!.withAlpha((0.6 * 255).toInt())
                   : Colors.white24,
               padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  Image(
-                    image: device.getIcon(),
-                    width: 50,
-                    height: 50,
-                    alignment: Alignment.centerLeft,
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.bottomLeft,
-                      child: Text(
-                        'Device ${device.deviceId}',
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Image(
+                        image: device.getIcon(),
+                        width: 50,
+                        height: 50,
+                        alignment: Alignment.centerLeft,
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.bottomLeft,
+                          child: Text(
+                            'Device ${device.deviceId}',
+                            style: CupertinoTheme.of(context)
+                                .textTheme
+                                .textStyle
+                                .copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        device.getStatusText(),
                         style: CupertinoTheme.of(context)
                             .textTheme
                             .textStyle
                             .copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    device.getStatusText(),
-                    style:
-                        CupertinoTheme.of(context).textTheme.textStyle.copyWith(
                               color: Colors.grey,
                               fontWeight: FontWeight.w500,
                             ),
+                      ),
+                    ],
                   ),
+                  _buildSensorWidget(device),
                 ],
               ),
             ),
@@ -306,6 +320,24 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  Widget _buildSensorWidget(TPDevice device) {
+    if (device is TPLightbulbDimmer) {
+      return Positioned(
+        right: 0,
+        child: Opacity(
+          opacity: device.sensorDetected ? 1 : 0.5,
+          child: Image(
+            image: device.getSensorIcon(),
+            width: 20,
+            height: 20,
+          ),
+        ),
+      );
+    } else {
+      return Container();
+    }
+  }
+
   Future<dynamic> _showQRCodeScanner() {
     return showCupertinoModalPopup(
       context: context,
@@ -316,6 +348,17 @@ class _MyAppState extends State<MyApp> {
     ).then((value) {
       _getDeviceList();
     });
+  }
+
+  Future<dynamic> _showDeviceDetails(ValueNotifier<TPDevice> device) {
+    return showCupertinoModalPopup(
+      context: context,
+      barrierDismissible: true,
+      filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+      builder: (_) {
+        return TPDeviceWidget(device: device);
+      },
+    );
   }
 
   Future<void> _getDeviceList() async {

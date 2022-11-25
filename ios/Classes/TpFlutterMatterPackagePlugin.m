@@ -4,7 +4,7 @@
 #import "TPChannelConstant.h"
 #import "TPDeviceChannel.h"
 #import "TPCommissionChannel.h"
-#import "TPLightbuldChannel.h"
+#import "TPLightbuldDimmerChannel.h"
 
 //MARK: - TpFlutterMatterPackagePlugin
 
@@ -27,7 +27,7 @@
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
     [TPDeviceChannel registerWithRegistrar:registrar];
     [TPCommissionChannel registerWithRegistrar:registrar];
-    [TPLightbuldChannel registerWithRegistrar:registrar];
+    [TPLightbuldDimmerChannel registerWithRegistrar:registrar];
 }
 
 @end

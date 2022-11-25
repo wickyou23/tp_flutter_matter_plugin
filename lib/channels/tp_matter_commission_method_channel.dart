@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:ffi';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:tp_flutter_matter_package/channels/tp_matter_commission_method_interface.dart';

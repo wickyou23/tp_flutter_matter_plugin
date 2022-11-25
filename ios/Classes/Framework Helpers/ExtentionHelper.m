@@ -6,6 +6,7 @@
 //
 
 #import "ExtentionHelper.h"
+#import <TPMatter/Matter.h>
 
 //MARK: - MTRDiscoverDevice+Ext
 
@@ -20,6 +21,44 @@
         @"ipAddressList": [self.ipAddressList filteredArrayUsingPredicate:ipv4Predicate],
         @"discriminator": self.discriminator
     };
+}
+
+@end
+
+//MARK: - MTRBaseDevice+Ext
+
+@implementation MTRBaseDevice(Ext)
+
+- (void)getEndpointByClusterId:(NSNumber*)clusterId
+         andAvailableEndpoints:(NSMutableArray*)endpoints
+                      andQueue:(dispatch_queue_t)queue
+                 andCompletion:(void(^)(NSNumber* _Nullable))completion {
+    if (endpoints.count == 0) {
+        completion(NULL);
+        return;
+    }
+    
+    NSNumber* endpoint = [endpoints firstObject];
+    [endpoints removeObjectAtIndex:0];
+    
+    __weak typeof(self) weakSelf = self;
+    [self readAttributePathWithEndpointID:endpoint
+                                clusterID:clusterId
+                              attributeID:NULL
+                                   params:NULL
+                                    queue:queue
+                               completion:^(NSArray<NSDictionary<NSString *,id> *> * _Nullable values, NSError * _Nullable error) {
+        if (error == NULL) {
+            completion(endpoint);
+        }
+        else {
+            typeof(self) strongSelf = weakSelf;
+            [strongSelf getEndpointByClusterId:clusterId
+                         andAvailableEndpoints:endpoints
+                                      andQueue:queue
+                                 andCompletion:completion];
+        }
+    }];
 }
 
 @end
