@@ -3,18 +3,18 @@ import 'dart:ui';
 
 import 'package:enough_platform_widgets/enough_platform_widgets.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:tp_flutter_matter_package/channels/devices/tp_device_control_manager.dart';
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
+import 'package:tp_flutter_matter_package/models/tp_device_lightbulb.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb_dimmer.dart';
 import 'package:tp_flutter_matter_package/tp_flutter_matter_package.dart';
 import 'package:tp_flutter_matter_package_example/custom_widgets/TPCupertinoSliverNavigationBar.dart';
+import 'package:tp_flutter_matter_package_example/custom_widgets/device_widgets/tp_device_widget.dart';
 import 'package:tp_flutter_matter_package_example/custom_widgets/tp_paring_device_widget.dart';
 import 'package:tp_flutter_matter_package_example/datas/tp_device_manager.dart';
 import 'package:tp_flutter_matter_package_example/datas/tp_storage_data.dart';
-import 'package:tp_flutter_matter_package_example/custom_widgets/device_widgets/tp_device_widget.dart';
-import 'package:tp_flutter_matter_package_example/custom_widgets/device_widgets/tp_lightbulb_dimmer_widget.dart';
-import 'package:tp_flutter_matter_package_example/managers/tp_commission_device_manager.dart';
+import 'package:tp_flutter_matter_package_example/tp_device_settings.dart';
 
 void main() {
   runZonedGuarded(() async {
@@ -24,6 +24,7 @@ void main() {
     runApp(
       const CupertinoSnackApp(
         home: MyApp(),
+        debugShowCheckedModeBanner: false,
         theme: CupertinoThemeData(
           brightness: Brightness.light,
           textTheme: CupertinoTextThemeData(
@@ -38,7 +39,7 @@ void main() {
             navTitleTextStyle: TextStyle(
               inherit: false,
               fontFamily: '.SF Pro Text',
-              fontSize: 17.0,
+              fontSize: 18.0,
               fontWeight: FontWeight.w600,
               letterSpacing: -0.41,
               color: Colors.white,
@@ -89,16 +90,35 @@ class _MyAppState extends State<MyApp> {
           ),
           CustomScrollView(
             slivers: [
-              const TPCupertinoSliverNavigationBar(
+              TPCupertinoSliverNavigationBar(
                 middleBackgroundColor: Colors.black12,
                 backgroundColor: Colors.transparent,
-                border: Border(
+                padding: const EdgeInsetsDirectional.only(end: 0),
+                border: const Border(
                   bottom: BorderSide(
                     color: Colors.transparent,
                     width: 0.0, // 0.0 means one physical pixel
                   ),
                 ),
-                largeTitle: Text('My Home'),
+                largeTitle: const Text('My Home'),
+                trailing: CupertinoButton(
+                  padding: const EdgeInsets.only(
+                    top: 0,
+                    bottom: 0,
+                    right: 8,
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.settings,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      CupertinoPageRoute(
+                        builder: (context) => const TPDeviceSettings(),
+                      ),
+                    );
+                  },
+                ),
               ),
               ValueListenableBuilder(
                 valueListenable: _isShowLoading,
@@ -184,38 +204,20 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  Widget _deviceCellWidget(ValueNotifier<TPDevice> deviceValue) {
+  Widget _deviceCellWidget(ValueNotifier<TPDevice> deviceNotifier) {
     return ValueListenableBuilder(
-      key: ValueKey(deviceValue.value.deviceId),
-      valueListenable: deviceValue,
+      key: ValueKey(deviceNotifier.value.deviceId),
+      valueListenable: deviceNotifier,
       builder: (_, device, __) {
         return GestureDetector(
           onTap: () {
-            _showDeviceDetails(deviceValue);
+            _showDeviceDetails(deviceNotifier);
           },
           onLongPress: () {
             _showDeviceActions(device);
           },
           onDoubleTap: () {
-            if (device is TPLightbulbDimmer) {
-              device.toggle((p0) async {
-                if (p0 != null) {
-                  if (!mounted) {
-                    return;
-                  }
-
-                  ScaffoldMessenger.of(context)
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(
-                      SnackBar(
-                        content: Text('[Error]: ${p0.errorMessage}'),
-                      ),
-                    );
-                } else {
-                  await TPDeviceManager().updateDevice(device);
-                }
-              });
-            }
+            _handleDoubleTap(deviceNotifier);
           },
           child: ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(10)),
@@ -241,7 +243,7 @@ class _MyAppState extends State<MyApp> {
                         child: Align(
                           alignment: Alignment.bottomLeft,
                           child: Text(
-                            'Device ${device.deviceId}',
+                            device.getDeviceName(),
                             style: CupertinoTheme.of(context)
                                 .textTheme
                                 .textStyle
@@ -264,7 +266,7 @@ class _MyAppState extends State<MyApp> {
                       ),
                     ],
                   ),
-                  _buildSensorWidget(device),
+                  _buildSensorOrErrorWidget(device),
                 ],
               ),
             ),
@@ -320,18 +322,49 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  Widget _buildSensorWidget(TPDevice device) {
-    if (device is TPLightbulbDimmer) {
+  Widget _buildSensorOrErrorWidget(TPDevice device) {
+    Widget sensorWidget(bool sensorDetected, AssetImage iconImage) {
       return Positioned(
         right: 0,
         child: Opacity(
-          opacity: device.sensorDetected ? 1 : 0.5,
+          opacity: sensorDetected ? 1 : 0.5,
           child: Image(
-            image: device.getSensorIcon(),
+            image: iconImage,
             width: 20,
             height: 20,
           ),
         ),
+      );
+    }
+
+    if (device.isError) {
+      return const Positioned(
+        right: 0,
+        child: Icon(
+          Icons.error_rounded,
+          color: CupertinoColors.systemRed,
+          size: 20,
+        ),
+      );
+    }
+
+    if (device is TPLightbulbDimmer) {
+      if (!device.isSupportedSensorDevice) {
+        return Container();
+      }
+
+      return sensorWidget(
+        device.sensorDetected,
+        device.getSensorIcon(),
+      );
+    } else if (device is TPLightbulb) {
+      if (!device.isSupportedSensorDevice) {
+        return Container();
+      }
+
+      return sensorWidget(
+        device.sensorDetected,
+        device.getSensorIcon(),
       );
     } else {
       return Container();
@@ -350,7 +383,17 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  Future<dynamic> _showDeviceDetails(ValueNotifier<TPDevice> device) {
+  Future<dynamic>? _showDeviceDetails(ValueNotifier<TPDevice> device) {
+    final deviceValue = device.value;
+    if (deviceValue is TPLightbulbDimmer) {
+      if (!deviceValue.isSupportedLevelControl &&
+          !deviceValue.isSupportedColorControl) {
+        return null;
+      }
+    } else if (deviceValue is TPLightbulb) {
+      return null;
+    }
+
     return showCupertinoModalPopup(
       context: context,
       barrierDismissible: true,
@@ -359,6 +402,45 @@ class _MyAppState extends State<MyApp> {
         return TPDeviceWidget(device: device);
       },
     );
+  }
+
+  Future<void> _handleDoubleTap(ValueNotifier<TPDevice> device) async {
+    final deviceValue = device.value;
+    if (deviceValue is TPLightbulbDimmer) {
+      final response = await deviceValue.toggle();
+      if (response is TPDeviceControlError) {
+        if (!mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text('[Error]: ${response.errorMessage}'),
+            ),
+          );
+      } else {
+        await TPDeviceManager().updateDevice(deviceValue);
+      }
+    } else if (deviceValue is TPLightbulb) {
+      final response = await deviceValue.toggle();
+      if (response is TPDeviceControlError) {
+        if (!mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text('[Error]: ${response.errorMessage}'),
+            ),
+          );
+      } else {
+        await TPDeviceManager().updateDevice(deviceValue);
+      }
+    }
   }
 
   Future<void> _getDeviceList() async {

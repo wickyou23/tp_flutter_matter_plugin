@@ -32,17 +32,14 @@ typedef NS_ENUM(uint16_t, TPDeviceType) {
 @property (nonatomic, assign) TPDeviceType deviceType;
 @property (nonatomic, strong) NSArray* subDevices;
 @property (nonatomic, strong) NSNumber* endpoint;
+@property (nonatomic, strong) NSDictionary* metadata;
 
-//@property (nonatomic, strong) NSMutableArray* subDeviceTypes;
-//@property (nonatomic, strong) NSArray<NSNumber*>* endpoints;
-
-- (instancetype)initWithDeviceId:(NSString*)deviceId andEndpoint:(NSNumber*)endpoint andDeviceType:(uint16_t)deviceType;
+- (instancetype)initWithDeviceId:(NSString*)deviceId
+                   andDeviceType:(uint16_t)deviceType
+                     andEndpoint:(NSNumber*)endpoint
+                     andMetadata:(NSDictionary*)metadata;
 - (NSDictionary*)convertToDict;
 - (void)addSubDevices:(NSArray*)subDevices;
-
-//- (instancetype)initWithDeviceId:(NSString*)deviceId andDeviceType:(uint16_t)deviceType;
-//- (void)addSubDeviceType:(TPDeviceType)deviceType;
-//- (void)addEndpoints:(NSArray<NSNumber*>*)endpoins;
 
 @end
 

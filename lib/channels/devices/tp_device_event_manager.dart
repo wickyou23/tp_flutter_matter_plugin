@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:tp_flutter_matter_package/models/tp_device.dart';
+
 abstract class TPDeviceEvent {
   final String deviceId;
 
@@ -8,8 +10,9 @@ abstract class TPDeviceEvent {
 
 class TPDeviceEventError extends TPDeviceEvent {
   final String errorMessage;
+  final TPDeviceErrorType errorType;
 
-  TPDeviceEventError(super.deviceId, this.errorMessage);
+  TPDeviceEventError(super.deviceId, this.errorType, this.errorMessage);
 }
 
 //TPLightbudDimmerEventSuccess
@@ -33,6 +36,19 @@ class TPLightbudDimmerEventSuccess extends TPDeviceEvent {
   });
 }
 
+//TPLightbudEventSuccess
+
+class TPLightbudEventSuccess extends TPDeviceEvent {
+  final bool? isOn;
+  final bool? sensorDetected;
+
+  TPLightbudEventSuccess(
+    super.deviceId, {
+    this.isOn,
+    this.sensorDetected,
+  });
+}
+
 //TPDeviceEventManager
 
 class TPDeviceEventManager {
@@ -50,5 +66,19 @@ class TPDeviceEventManager {
 
   void addEvent(TPDeviceEvent deviceEvent) {
     _event.add(deviceEvent);
+  }
+
+  TPDeviceEventError getDeviceEventErrorAndSend(Map errorJson,
+      {bool needToSend = true}) {
+    final deviceId = errorJson['deviceId'] as String? ?? '';
+    final errorType = errorJson['errorType'] as int? ?? 0xffffffff;
+    final errorMessage = errorJson['errorMessage'] as String? ?? '';
+    final deviceEventError = TPDeviceEventError(
+        deviceId, TPDeviceErrorType.fromValue(errorType), errorMessage);
+    if (needToSend) {
+      addEvent(deviceEventError);
+    }
+
+    return deviceEventError;
   }
 }

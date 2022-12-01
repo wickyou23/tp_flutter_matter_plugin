@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:tp_flutter_matter_package/channels/devices/tp_device_control_manager.dart';
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb_dimmer.dart';
 import 'package:tp_flutter_matter_package_example/datas/tp_device_manager.dart';
@@ -19,10 +20,8 @@ class TPLightbulbDimmerWidget extends StatefulWidget {
 }
 
 class _TPLightbulbDimmerWidget extends State<TPLightbulbDimmerWidget> {
-  double _volume = 0;
-
-  final ValueNotifier<LightActionType> _actionTypeSelected =
-      ValueNotifier(LightActionType.brightness);
+  final _level = ValueNotifier<double>(0);
+  final _actionTypeSelected = ValueNotifier(LightActionType.brightness);
 
   TPLightbulbDimmer get dimmerDevice {
     return widget.device.value as TPLightbulbDimmer;
@@ -30,7 +29,7 @@ class _TPLightbulbDimmerWidget extends State<TPLightbulbDimmerWidget> {
 
   @override
   void initState() {
-    _volume = dimmerDevice.level.toDouble();
+    _level.value = dimmerDevice.level.toDouble();
     super.initState();
   }
 
@@ -64,16 +63,11 @@ class _TPLightbulbDimmerWidget extends State<TPLightbulbDimmerWidget> {
                       ),
                     ],
                   ),
-                  onPressed: () {
-                    dimmerDevice.toggle(
-                      (p0) async {
-                        if (p0 != null) {
-                          return;
-                        }
-
-                        await TPDeviceManager().updateDevice(device);
-                      },
-                    );
+                  onPressed: () async {
+                    final response = await dimmerDevice.toggle();
+                    if (response is TPDeviceControlSuccess) {
+                      await TPDeviceManager().updateDevice(device);
+                    }
                   },
                 ),
                 const SizedBox(height: 10),
@@ -99,36 +93,39 @@ class _TPLightbulbDimmerWidget extends State<TPLightbulbDimmerWidget> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  height: 50,
-                  child: ValueListenableBuilder(
-                    valueListenable: _actionTypeSelected,
-                    builder: (_, type, __) {
-                      return CupertinoSlidingSegmentedControl<LightActionType>(
-                        groupValue: type,
-                        backgroundColor: CupertinoColors.systemGrey2,
-                        children: {
-                          LightActionType.brightness: Text(
-                            'Brightness',
-                            style: Theme.of(context).textTheme.button,
-                          ),
-                          LightActionType.temperatureColor: Text(
-                            'Temperature',
-                            style: Theme.of(context).textTheme.button,
-                          ),
-                          LightActionType.hueColor: Text(
-                            'Colors',
-                            style: Theme.of(context).textTheme.button,
-                          ),
-                        },
-                        onValueChanged: (value) {
-                          _actionTypeSelected.value = value!;
-                        },
-                      );
-                    },
+                if (dimmerDevice.isSupportedColorControl)
+                  SizedBox(
+                    height: 50,
+                    child: ValueListenableBuilder(
+                      valueListenable: _actionTypeSelected,
+                      builder: (_, type, __) {
+                        return CupertinoSlidingSegmentedControl<
+                            LightActionType>(
+                          groupValue: type,
+                          backgroundColor: CupertinoColors.systemGrey2,
+                          children: {
+                            LightActionType.brightness: Text(
+                              'Brightness',
+                              style: Theme.of(context).textTheme.button,
+                            ),
+                            LightActionType.temperatureColor: Text(
+                              'Temperature',
+                              style: Theme.of(context).textTheme.button,
+                            ),
+                            LightActionType.hueColor: Text(
+                              'Colors',
+                              style: Theme.of(context).textTheme.button,
+                            ),
+                          },
+                          onValueChanged: (value) {
+                            _actionTypeSelected.value = value!;
+                          },
+                        );
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
+                if (dimmerDevice.isSupportedColorControl)
+                  const SizedBox(height: 8),
               ],
             ),
           );
@@ -145,25 +142,29 @@ class _TPLightbulbDimmerWidget extends State<TPLightbulbDimmerWidget> {
           thumbShape: SliderComponentShape.noThumb,
           trackShape: const _RoundedRectSliderTrackShape(),
         ),
-        child: Slider(
-          min: 0,
-          max: 100,
-          value: _volume,
-          onChanged: (value) => setState(() => _volume = value),
-          onChangeEnd: (value) {
-            dimmerDevice.controlLevel(
-              value.toInt(),
-              (p0) async {
-                if (p0 != null) {
+        child: ValueListenableBuilder(
+          valueListenable: _level,
+          builder: (context, value, child) {
+            return Slider(
+              min: 0,
+              max: 100,
+              value: value,
+              onChanged: (value) {
+                _level.value = value;
+              },
+              onChangeEnd: (value) async {
+                final response = await dimmerDevice.controlLevel(value.toInt());
+                if (response is TPDeviceControlError) {
+                  _level.value = device.level.toDouble();
                   return;
                 }
 
                 await TPDeviceManager().updateDevice(device);
               },
+              inactiveColor: Colors.black45,
+              activeColor: Colors.white,
             );
           },
-          inactiveColor: Colors.black45,
-          activeColor: Colors.white,
         ),
       ),
     );
@@ -173,17 +174,11 @@ class _TPLightbulbDimmerWidget extends State<TPLightbulbDimmerWidget> {
     return _TempurateColorSlider(
       height: 250,
       temperatureColor: device.temperatureColor.toDouble(),
-      endDrag: (p0) {
-        dimmerDevice.controlTemperatureColor(
-          p0.toInt(),
-          (p0) async {
-            if (p0 != null) {
-              return;
-            }
+      endDrag: (p0) async {
+        final response = await dimmerDevice.controlTemperatureColor(p0.toInt());
+        if (response is TPDeviceControlError) {}
 
-            await TPDeviceManager().updateDevice(device);
-          },
-        );
+        await TPDeviceManager().updateDevice(device);
       },
     );
   }
@@ -193,18 +188,12 @@ class _TPLightbulbDimmerWidget extends State<TPLightbulbDimmerWidget> {
       height: 250,
       hsvColor: HSVColor.fromAHSV(
           1, device.hue.toDouble(), device.saturation.toDouble(), 1),
-      endDrag: (p0) {
-        dimmerDevice.controlHueAndSaturationColor(
-          p0.hue.toInt(),
-          p0.saturation.toInt(),
-          (p0) async {
-            if (p0 != null) {
-              return;
-            }
-
-            await TPDeviceManager().updateDevice(device);
-          },
-        );
+      endDrag: (p0) async {
+        final response = dimmerDevice.controlHueAndSaturationColor(
+            p0.hue.toInt(), p0.saturation.toInt());
+        if (response is TPDeviceControlSuccess) {
+          await TPDeviceManager().updateDevice(device);
+        }
       },
     );
   }
@@ -333,7 +322,7 @@ class _TempurateColorSlider extends LeafRenderObjectWidget {
   @override
   void updateRenderObject(BuildContext context,
       covariant _RenderTempurateColorSliderBox renderObject) {
-    super.updateRenderObject(context, renderObject);
+    renderObject.updateNewTemperatureColor(temperatureColor);
   }
 }
 
@@ -361,7 +350,7 @@ class _RenderTempurateColorSliderBox extends RenderBox {
   static const thumbSize = 20.0;
 
   final double height;
-  final double temperatureColor;
+  double temperatureColor;
   final void Function(double)? endDrag;
 
   late PanGestureRecognizer _drag;
@@ -492,6 +481,14 @@ class _RenderTempurateColorSliderBox extends RenderBox {
     markNeedsPaint();
     markNeedsSemanticsUpdate();
   }
+
+  void updateNewTemperatureColor(double temperatureColor) {
+    this.temperatureColor = temperatureColor;
+    _tempValue = max(temperatureColor, mink);
+    _isFirstDraw = false;
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
+  }
 }
 
 //HUEColorSlider
@@ -519,7 +516,7 @@ class _HUEColorSlider extends LeafRenderObjectWidget {
   @override
   void updateRenderObject(
       BuildContext context, covariant _RenderHUEColorSliderBox renderObject) {
-    super.updateRenderObject(context, renderObject);
+    renderObject.updateNewHVSColor(hsvColor);
   }
 }
 
@@ -543,8 +540,9 @@ class _RenderHUEColorSliderBox extends RenderBox {
   static const thumbSize = 20.0;
 
   final double height;
-  final HSVColor hsvColor;
   final void Function(HSVColor)? endDrag;
+
+  HSVColor hsvColor;
 
   late PanGestureRecognizer _drag;
 
@@ -659,6 +657,14 @@ class _RenderHUEColorSliderBox extends RenderBox {
     final dx = center.dx - localPosition.dx;
     final dy = center.dy - localPosition.dy;
     _angleValue = atan2(dy, dx) * (180 / pi) + 180;
+
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
+  }
+
+  void updateNewHVSColor(HSVColor hsvColor) {
+    this.hsvColor = hsvColor;
+    _isFirstDraw = false;
 
     markNeedsPaint();
     markNeedsSemanticsUpdate();

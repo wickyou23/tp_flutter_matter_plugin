@@ -9,15 +9,16 @@
 
 @implementation TPDevice
 
-- (instancetype)initWithDeviceId:(NSString*)deviceId andEndpoint:(NSNumber*)endpoint andDeviceType:(uint16_t)deviceType {
+- (instancetype)initWithDeviceId:(NSString*)deviceId
+                   andDeviceType:(uint16_t)deviceType
+                     andEndpoint:(NSNumber*)endpoint
+                     andMetadata:(NSDictionary*)metadata {
     if (self = [super init]) {
         _deviceId = deviceId;
         _deviceType = deviceType;
         _subDevices = [NSArray array];
         _endpoint = endpoint;
-        
-//        _subDeviceTypes = [NSMutableArray array];
-//        _endpoints = [NSArray array];
+        _metadata = metadata;
     }
     
     return self;
@@ -33,20 +34,13 @@
         @"deviceId": _deviceId,
         @"deviceType": @(_deviceType),
         @"subDevices": subDevicesDict,
-        @"endpoint": _endpoint
+        @"endpoint": _endpoint,
+        @"metadata": _metadata
     };
 }
 
 - (void)addSubDevices:(NSArray*)subDevices {
     _subDevices = subDevices;
 }
-
-//- (void)addSubDeviceType:(TPDeviceType)deviceType {
-//    [_subDeviceTypes addObject:@(deviceType)];
-//}
-//
-//- (void)addEndpoints:(NSArray<NSNumber*>*)endpoints {
-//    _endpoints = endpoints;
-//}
 
 @end

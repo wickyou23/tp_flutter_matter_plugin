@@ -7,17 +7,34 @@
 
 #import <Foundation/Foundation.h>
 #import <TPMatter/Matter.h>
+#import <Flutter/Flutter.h>
+#import "TPDeviceErrorConstant.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface TPDeviceChannelHelper : NSObject
 
-+ (dispatch_queue_t)eventQueue;
 + (void)verifyClusterIdWithEndpoint:(NSNumber*)endpoint
                        andClusterId:(NSNumber*)clusterId
                  andDeviceConnected:(MTRBaseDevice*)device
                            andQueue:(dispatch_queue_t)queue
-                      andCompletion:(void(^)(NSNumber* _Nullable))completion;
+                      andCompletion:(void(^)(NSNumber* _Nullable, NSError* _Nullable))completion;
+
+//MARK: - EventSink
++ (void)sendControlErrorResult:(FlutterResult)result
+                   andDeviceId:(NSString*)deviceId
+                      andError:(NSError* _Nullable)error
+                    andMessage:(NSString* _Nullable)message;
++ (void)sendControlSuccessResult:(FlutterResult)result
+                     andDeviceId:(NSString*)deviceId
+                         andData:(id _Nullable)data;
++ (void)sendReportEventSink:(FlutterEventSink)eventSink
+                andDeviceId:(NSString*)deviceId
+                    andData:(id _Nullable)data;
++ (void)sendReportErrorEventSink:(FlutterEventSink)eventSink
+                     andDeviceId:(NSString*)deviceId
+                        andError:(NSError*)error
+                      andMessage:(NSString* _Nullable)message;
 @end
 
 NS_ASSUME_NONNULL_END

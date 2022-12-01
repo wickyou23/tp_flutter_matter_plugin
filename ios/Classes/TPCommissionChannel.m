@@ -350,26 +350,47 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
         
         MTRDeviceResponseHandler readAttributeCompletion = ^(NSArray<NSDictionary<NSString *,id> *> * _Nullable values, NSError * _Nullable error) {
             typeof(self) strongSelf = weakSelf;
-            NSMutableArray<MTRAttributePath*> *endpoints = [NSMutableArray array];
+            NSMutableDictionary* metadata = [NSMutableDictionary dictionary];
             for (NSMutableDictionary *mainDict in values) {
                 MTRAttributePath* attributePath = [mainDict objectForKey:@"attributePath"];
-                [endpoints addObject:attributePath];
+                NSMutableDictionary* endpointMetadata = [metadata objectForKey:attributePath.endpoint];
+                if (endpointMetadata == NULL) {
+                    NSMutableArray* attributeIds = [NSMutableArray arrayWithObject:attributePath.attribute];
+                    NSMutableDictionary* initMetadata = [NSMutableDictionary dictionaryWithDictionary:@{
+                        @"clusters": [NSMutableDictionary dictionaryWithDictionary:@{
+                            attributePath.cluster: attributeIds
+                        }]
+                    }];
+                    
+                    [metadata setObject:initMetadata forKey:attributePath.endpoint];
+                }
+                else {
+                    NSMutableDictionary* clustersDict = [endpointMetadata objectForKey:@"clusters"];
+                    NSMutableArray* attributeIds = clustersDict[attributePath.cluster];
+                    if (attributeIds == NULL) {
+                        [clustersDict setObject:[NSMutableArray arrayWithObject:attributePath.attribute]
+                                         forKey:attributePath.cluster];
+                    }
+                    else {
+                        [attributeIds addObject:attributePath.attribute];
+                    }
+                }
             }
             
-            NSLog(@"[Comission][attributePath]: %@", values);
-            if (endpoints.count == 0) {
+            NSLog(@"[Comission][attributePath]: %ld", values.count);
+            if (metadata.count == 0) {
                 NSLog(@"Device endpoints not found");
                 [self sendCommissionSuccessEventSink: @{@"message": @"Device endpoints not found"}];
                 return;
             }
             
-            [strongSelf getDeviceTypeWithBaseDevice:device andEndpoint:endpoints];
+            [strongSelf getDeviceTypeWithBaseDevice:device andMetadata:metadata];
         };
         
         typeof(self) strongSelf = weakSelf;
         [device readAttributePathWithEndpointID:NULL
-                                      clusterID:@(MTRClusterIDTypeDescriptorID)
-                                    attributeID:@(MTRAttributeIDTypeClusterDescriptorAttributePartsListID)
+                                      clusterID:NULL
+                                    attributeID:NULL
                                          params:NULL
                                           queue:strongSelf->comissionQueue
                                      completion:readAttributeCompletion];
@@ -381,12 +402,12 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
     }
 }
 
-- (void)getDeviceTypeWithBaseDevice:(MTRBaseDevice*)device andEndpoint:(NSArray*)attributePaths {
+- (void)getDeviceTypeWithBaseDevice:(MTRBaseDevice*)device andMetadata:(NSDictionary*)metadata {
     __block TPDevice* tpDevice;
     __block NSError* anyError;
     __block NSMutableArray* subDevices = [NSMutableArray array];
     __weak typeof(self) weakSelf = self;
-    [attributePaths enumerateObjectsUsingBlock:^(MTRAttributePath*  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+    [metadata.allKeys enumerateObjectsUsingBlock:^(NSNumber*  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         typeof(self) strongSelf = weakSelf;
         if (anyError != NULL) {
             [strongSelf sendCommissionSuccessEventSink: @{@"message": @"Status: Waiting for connection with the device"}];
@@ -394,13 +415,13 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
             return;
         }
         
-        if ([obj.endpoint intValue] == 0) {
+        if ([obj intValue] == 0) {
             NSLog(@"Skip endpoint 0");
             return;
         }
         
         MTRBaseClusterDescriptor* descriptor = [[MTRBaseClusterDescriptor alloc] initWithDevice:device
-                                                                                       endpoint:obj.endpoint
+                                                                                       endpoint:obj
                                                                                           queue:strongSelf->comissionQueue];
         [descriptor readAttributeDeviceTypeListWithCompletion:^(NSArray * _Nullable value, NSError * _Nullable error) {
             anyError = error;
@@ -412,16 +433,18 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
             uint64_t lastId = MTRGetLastPairedDeviceId();
             NSLog(@"Device attributes of %llu: %@", lastId, value);
             MTRDescriptorClusterDeviceTypeStruct* deviceTypeStruct = (MTRDescriptorClusterDeviceTypeStruct*)[value firstObject];
-            if (idx == attributePaths.count - 1) {
+            if (idx == metadata.count - 1) {
                 if (tpDevice == NULL) {
                     tpDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
-                                                      andEndpoint:obj.endpoint
-                                                    andDeviceType:[deviceTypeStruct.type longLongValue]];
+                                                    andDeviceType:[deviceTypeStruct.type longLongValue]
+                                                      andEndpoint:obj
+                                                      andMetadata:[metadata objectForKey:obj]];
                 }
                 else {
                     TPDevice* subDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
-                                                                 andEndpoint:obj.endpoint
-                                                               andDeviceType:[deviceTypeStruct.type longLongValue]];
+                                                               andDeviceType:[deviceTypeStruct.type longLongValue]
+                                                                 andEndpoint:obj
+                                                                 andMetadata:[metadata objectForKey:obj]];
                     [subDevices addObject:subDevice];
                 }
                 
@@ -434,13 +457,15 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
             else {
                 if (tpDevice == NULL) {
                     tpDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
-                                                      andEndpoint:obj.endpoint
-                                                    andDeviceType:[deviceTypeStruct.type longLongValue]];
+                                                    andDeviceType:[deviceTypeStruct.type longLongValue]
+                                                      andEndpoint:obj
+                                                      andMetadata:[metadata objectForKey:obj]];
                 }
                 else {
                     TPDevice* subDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
-                                                                 andEndpoint:obj.endpoint
-                                                               andDeviceType:[deviceTypeStruct.type longLongValue]];
+                                                               andDeviceType:[deviceTypeStruct.type longLongValue]
+                                                                 andEndpoint:obj
+                                                                 andMetadata:[metadata objectForKey:obj]];
                     [subDevices addObject:subDevice];
                 }
             }
