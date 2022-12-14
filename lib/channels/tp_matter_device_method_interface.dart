@@ -1,5 +1,7 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:tp_flutter_matter_package/channels/tp_matter_device_method_channel.dart';
+import 'package:tp_flutter_matter_package/channels/tp_matter_helper.dart';
+import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_discover_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_setup_payload.dart';
 
@@ -34,6 +36,18 @@ abstract class TpMatterDevicePlatform extends PlatformInterface {
   }
 
   Future<TPSetupPlayload?> getSetupPayloadFromQRCodeString(String qrCode) {
-    throw UnimplementedError('getSetupPayloadFromQRCodeString() has not been implemented.');
+    throw UnimplementedError(
+        'getSetupPayloadFromQRCodeString() has not been implemented.');
+  }
+
+  Future<TPMatterResponse> saveBindingWithDevice(TPDevice device,
+      Map<TPDeviceClusterIDType, List<TPDevice>> bindingDevices) {
+    throw UnimplementedError(
+        'getSetupPayloadFromQRCodeString() has not been implemented.');
+  }
+
+  Future<TPMatterResponse> readBindingDatasWithDevice(TPDevice device) {
+    throw UnimplementedError(
+        'readBindingDatasWithDevice() has not been implemented.');
   }
 }

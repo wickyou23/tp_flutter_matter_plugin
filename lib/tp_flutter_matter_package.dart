@@ -1,6 +1,8 @@
 import 'package:tp_flutter_matter_package/channels/tp_matter_commission_method_channel.dart';
 import 'package:tp_flutter_matter_package/channels/tp_matter_commission_method_interface.dart';
 import 'package:tp_flutter_matter_package/channels/tp_matter_device_method_interface.dart';
+import 'package:tp_flutter_matter_package/channels/tp_matter_helper.dart';
+import 'package:tp_flutter_matter_package/models/tp_binding_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_discover_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_setup_payload.dart';
@@ -44,5 +46,27 @@ class TpFlutterMatterPlugin {
       String qrCode) async {
     return await TpMatterDevicePlatform.instance
         .getSetupPayloadFromQRCodeString(qrCode);
+  }
+
+  Future<TPMatterResponse> saveBindingWithDevice(TPDevice device,
+      Map<TPDeviceClusterIDType, List<TPDevice>> bindingDevices) async {
+    return await TpMatterDevicePlatform.instance
+        .saveBindingWithDevice(device, bindingDevices);
+  }
+
+  Future<TPMatterResponse> readBindingDatasWithDevice(TPDevice device) async {
+    final result = await TpMatterDevicePlatform.instance
+        .readBindingDatasWithDevice(device);
+    if (result is TPMatterResponseSuccess) {
+      final datas = result.data;
+      if (datas is List) {
+        return TPMatterResponseSuccess<List<TPBindingDevice>>(
+          result.deviceId,
+          data: datas.map((e) => TPBindingDevice.fromJson(e as Map)).toList(),
+        );
+      }
+    }
+
+    return result;
   }
 }

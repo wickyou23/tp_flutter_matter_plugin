@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
-import 'package:tp_flutter_matter_package/models/tp_device_lightbulb_dimmer.dart';
 import 'package:tp_flutter_matter_package_example/custom_widgets/device_widgets/tp_lightbulb_dimmer_widget.dart';
 
 class TPDeviceWidget extends StatelessWidget {

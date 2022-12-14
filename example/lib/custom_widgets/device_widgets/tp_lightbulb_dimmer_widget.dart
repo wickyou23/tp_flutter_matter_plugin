@@ -6,7 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:tp_flutter_matter_package/channels/devices/tp_device_control_manager.dart';
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb_dimmer.dart';
-import 'package:tp_flutter_matter_package_example/datas/tp_device_manager.dart';
+import 'package:tp_flutter_matter_package_example/managers/tp_device_manager.dart';
 
 enum LightActionType { brightness, temperatureColor, hueColor }
 

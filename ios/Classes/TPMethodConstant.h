@@ -9,14 +9,23 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+//MARK: - Device
+extern NSString* const TPMethodGetPlatformVersion;
+extern NSString* const TPMethodGetDiscoverDevice;
+extern NSString* const TPMethodGetDeviceList;
+extern NSString* const TPMethodUnpairDeviceById;
+extern NSString* const TPMethodGetSetupPayloadFromQRCodeString;
+extern NSString* const TPMethodSaveBindingWithDeviceId;
+extern NSString* const TPMethodReadBindingDatasWithDeviceId;
+
 //Basic
-extern NSString* const methodTurnOnName;
-extern NSString* const methodTurnOffName;
+extern NSString* const TPMethodTurnOnName;
+extern NSString* const TPMethodTurnOffName;
 
 //Dimmer
-extern NSString* const methodLevelControlName;
-extern NSString* const methodSubscribeName;
-extern NSString* const methodControlTemperatureColorName;
-extern NSString* const methodcontrolHUEAndSaturationColorName;
+extern NSString* const TPMethodLevelControlName;
+extern NSString* const TPMethodSubscribeName;
+extern NSString* const TPMethodControlTemperatureColorName;
+extern NSString* const TPMethodcontrolHUEAndSaturationColorName;
 
 NS_ASSUME_NONNULL_END

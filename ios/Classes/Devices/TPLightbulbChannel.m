@@ -35,27 +35,37 @@
 - (instancetype)init {
     if (self = [super init]) {
         chipController = InitializeMTR();
-        deviceChannelQueue = dispatch_queue_create("com.device.lightbulb.channel.queue", DISPATCH_QUEUE_SERIAL);
-        deviceEventQueue = dispatch_queue_create("com.device.lightbulb.event.queue", DISPATCH_QUEUE_SERIAL);
+        deviceChannelQueue = dispatch_queue_create("com.device.lightbulb.channel.queue", DISPATCH_QUEUE_CONCURRENT);
+        deviceEventQueue = dispatch_queue_create("com.device.lightbulb.event.queue", DISPATCH_QUEUE_CONCURRENT);
     }
     
     return self;
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
-    if ([methodTurnOnName isEqualToString:call.method]) {
+    if ([TPMethodTurnOnName isEqualToString:call.method]) {
         NSDictionary* args = (NSDictionary*)call.arguments;
         NSString* deviceId = args[@"deviceId"];
         NSNumber* endpoint = args[@"endpoint"];
-        [self turnOnOff:deviceId andEndpoint:endpoint andOnOff:YES andResult:result];
+        NSArray* subEndpoints = args[@"subEndpoints"];
+        [self turnOnOff:deviceId
+            andEndpoint:endpoint
+        andSubEndpoints:subEndpoints
+               andOnOff:YES
+              andResult:result];
     }
-    else if ([methodTurnOffName isEqualToString:call.method]) {
+    else if ([TPMethodTurnOffName isEqualToString:call.method]) {
         NSDictionary* args = (NSDictionary*)call.arguments;
         NSString* deviceId = args[@"deviceId"];
         NSNumber* endpoint = args[@"endpoint"];
-        [self turnOnOff:deviceId andEndpoint:endpoint andOnOff:NO andResult:result];
+        NSArray* subEndpoints = args[@"subEndpoints"];
+        [self turnOnOff:deviceId
+            andEndpoint:endpoint
+        andSubEndpoints:subEndpoints
+               andOnOff:NO
+              andResult:result];
     }
-    else if ([methodSubscribeName isEqualToString:call.method]) {
+    else if ([TPMethodSubscribeName isEqualToString:call.method]) {
         NSDictionary* args = (NSDictionary*)call.arguments;
         NSString* deviceId = args[@"deviceId"];
         result(@([self subscribeWithDeviceId:deviceId]));
@@ -67,6 +77,7 @@
 
 - (void)turnOnOff:(NSString*)deviceId
       andEndpoint:(NSNumber*)endpoint
+  andSubEndpoints:(NSArray*)subEndpoints
          andOnOff:(BOOL)onOff
         andResult:(FlutterResult)result {
     __weak typeof(self) weakSelf = self;
@@ -121,6 +132,7 @@
             
             typeof(self) strongSelf = weakSelf;
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:endpoint
+                                               andSubEndpoints:[NSMutableArray arrayWithArray:subEndpoints]
                                                   andClusterId:@(MTRClusterIDTypeOnOffID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue
@@ -155,11 +167,13 @@
                     NSLog(@"Error reading on/off: %@", report.error);
                     [TPDeviceChannelHelper sendReportErrorEventSink:strongSelf->eventSink
                                                         andDeviceId:deviceId
+                                                        andEndpoint:report.path.endpoint
                                                            andError:report.error
                                                          andMessage:[report.error description]];
                 } else {
                     [TPDeviceChannelHelper sendReportEventSink:strongSelf->eventSink
                                                    andDeviceId:deviceId
+                                                   andEndpoint:report.path.endpoint
                                                        andData:@{@"isOn": (NSNumber *)report.value}];
                 }
             }
@@ -169,11 +183,13 @@
                     NSLog(@"Error reading current level: %@", report.error);
                     [TPDeviceChannelHelper sendReportErrorEventSink:strongSelf->eventSink
                                                         andDeviceId:deviceId
+                                                        andEndpoint:report.path.endpoint
                                                            andError:report.error
                                                          andMessage:[report.error description]];
                 } else {
                     [TPDeviceChannelHelper sendReportEventSink:strongSelf->eventSink
                                                    andDeviceId:deviceId
+                                                   andEndpoint:report.path.endpoint
                                                        andData:@{@"sensorDetected": (NSNumber *)report.value}];
                 }
             }
@@ -185,6 +201,7 @@
         NSLog(@"Status: update reportAttributeMeasuredValue completed with error %@", [error description]);
         [TPDeviceChannelHelper sendReportErrorEventSink:strongSelf->eventSink
                                             andDeviceId:deviceId
+                                            andEndpoint:NULL
                                                andError:error
                                              andMessage:[error description]];
     };

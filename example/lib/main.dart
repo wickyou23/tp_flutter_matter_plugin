@@ -8,12 +8,14 @@ import 'package:tp_flutter_matter_package/channels/devices/tp_device_control_man
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb_dimmer.dart';
+import 'package:tp_flutter_matter_package/models/tp_device_lightswitch.dart';
 import 'package:tp_flutter_matter_package/tp_flutter_matter_package.dart';
 import 'package:tp_flutter_matter_package_example/custom_widgets/TPCupertinoSliverNavigationBar.dart';
 import 'package:tp_flutter_matter_package_example/custom_widgets/device_widgets/tp_device_widget.dart';
 import 'package:tp_flutter_matter_package_example/custom_widgets/tp_paring_device_widget.dart';
-import 'package:tp_flutter_matter_package_example/datas/tp_device_manager.dart';
+import 'package:tp_flutter_matter_package_example/managers/tp_device_manager.dart';
 import 'package:tp_flutter_matter_package_example/datas/tp_storage_data.dart';
+import 'package:tp_flutter_matter_package_example/tp_device_setting_details.dart';
 import 'package:tp_flutter_matter_package_example/tp_device_settings.dart';
 
 void main() {
@@ -64,9 +66,16 @@ class _MyAppState extends State<MyApp> {
   final _isShowLoading = ValueNotifier<bool>(false);
   final _tpFlutterMatterPlugin = TpFlutterMatterPlugin();
 
+  late StreamSubscription _deviceListChangedStream;
+
   @override
   void initState() {
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      _getDeviceList();
+    });
+
+    _deviceListChangedStream =
+        TPDeviceManager().deviceListChangedStream.listen((event) {
       _getDeviceList();
     });
 
@@ -75,6 +84,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    _deviceListChangedStream.cancel();
     super.dispose();
   }
 
@@ -115,6 +125,8 @@ class _MyAppState extends State<MyApp> {
                     Navigator.of(context).push(
                       CupertinoPageRoute(
                         builder: (context) => const TPDeviceSettings(),
+                        settings: const RouteSettings(
+                            name: TPDeviceSettings.routeName),
                       ),
                     );
                   },
@@ -390,7 +402,18 @@ class _MyAppState extends State<MyApp> {
           !deviceValue.isSupportedColorControl) {
         return null;
       }
-    } else if (deviceValue is TPLightbulb) {
+    } else {
+      Navigator.of(context).push(
+        CupertinoPageRoute(
+          builder: (_) {
+            return TPDeviceSettingDetails(device: device);
+          },
+          settings: const RouteSettings(
+            name: TPDeviceSettingDetails.routeName,
+          ),
+        ),
+      );
+
       return null;
     }
 

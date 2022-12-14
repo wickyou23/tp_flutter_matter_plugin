@@ -161,9 +161,8 @@ extension MethodChannelTpMatterCommissionEvent
               errorMessage,
             ));
       } else if (event.containsKey(tpCommissionDeviceAttestationFailedKey)) {
-        String errorMessage = '';
-        Map errorMap = event[tpCommissionDeviceAttestationFailedKey] as Map;
-        errorMessage = (errorMap['errorMessage'] as String?) ?? '';
+        String errorMessage =
+            event[tpCommissionDeviceAttestationFailedKey] as String;
         _commissionComlepted?.call(
             null,
             CommisstionError(

@@ -4,15 +4,17 @@ import 'package:tp_flutter_matter_package/models/tp_device.dart';
 
 abstract class TPDeviceEvent {
   final String deviceId;
+  final int? endpoint;
 
-  TPDeviceEvent(this.deviceId);
+  TPDeviceEvent(this.deviceId, this.endpoint);
 }
 
 class TPDeviceEventError extends TPDeviceEvent {
   final String errorMessage;
   final TPDeviceErrorType errorType;
 
-  TPDeviceEventError(super.deviceId, this.errorType, this.errorMessage);
+  TPDeviceEventError(
+      super.deviceId, super.endpoint, this.errorType, this.errorMessage);
 }
 
 //TPLightbudDimmerEventSuccess
@@ -26,7 +28,8 @@ class TPLightbudDimmerEventSuccess extends TPDeviceEvent {
   final bool? sensorDetected;
 
   TPLightbudDimmerEventSuccess(
-    super.deviceId, {
+    super.deviceId,
+    super.endpoint, {
     this.isOn,
     this.level,
     this.temperatureColor,
@@ -43,7 +46,8 @@ class TPLightbudEventSuccess extends TPDeviceEvent {
   final bool? sensorDetected;
 
   TPLightbudEventSuccess(
-    super.deviceId, {
+    super.deviceId,
+    super.endpoint, {
     this.isOn,
     this.sensorDetected,
   });
@@ -73,8 +77,9 @@ class TPDeviceEventManager {
     final deviceId = errorJson['deviceId'] as String? ?? '';
     final errorType = errorJson['errorType'] as int? ?? 0xffffffff;
     final errorMessage = errorJson['errorMessage'] as String? ?? '';
-    final deviceEventError = TPDeviceEventError(
-        deviceId, TPDeviceErrorType.fromValue(errorType), errorMessage);
+    final endpoint = errorJson['endpoint'] as int?;
+    final deviceEventError = TPDeviceEventError(deviceId, endpoint,
+        TPDeviceErrorType.fromValue(errorType), errorMessage);
     if (needToSend) {
       addEvent(deviceEventError);
     }

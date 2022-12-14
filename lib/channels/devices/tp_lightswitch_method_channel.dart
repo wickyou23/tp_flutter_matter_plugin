@@ -2,39 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:tp_flutter_matter_package/channels/devices/tp_device_control_manager.dart';
 import 'package:tp_flutter_matter_package/channels/devices/tp_device_event_manager.dart';
-import 'package:tp_flutter_matter_package/channels/devices/tp_lightbuld_method_interface.dart';
+import 'package:tp_flutter_matter_package/channels/devices/tp_lightswitch_method_interface.dart';
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package/tp_matter_channel_const.dart';
 
-class MethodChannelTpLightbulbDevice extends TPLightbulbDevicePlatform {
+class MethodChannelTpLightSwitchDevice extends TPLightSwitchDevicePlatform {
   @visibleForTesting
-  final methodChannel = const MethodChannel(tpLightbulbChannelDomain);
-  final eventChannel = const EventChannel(tpLightbulbEventChannelDomain);
+  final methodChannel = const MethodChannel(tpLightSwitchChannelDomain);
+  final eventChannel = const EventChannel(tpLightSwitchEventChannelDomain);
 
-  MethodChannelTpLightbulbDevice() {
+  MethodChannelTpLightSwitchDevice() {
     eventChannel.receiveBroadcastStream().listen(_onControlEvent);
-  }
-
-  @override
-  Future<TPDeviceControlResponse> turnON(TPDevice device) async {
-    final result = await methodChannel.invokeMethod<Map>('turnON', {
-      'deviceId': device.deviceId,
-      'endpoint': device.endpoint,
-      'subEndpoints': device.subEndpoints,
-    });
-    return TPDeviceControlHelper.handleControlResponse(result);
-  }
-
-  @override
-  Future<TPDeviceControlResponse> turnOFF(TPDevice device) async {
-    final result = await methodChannel.invokeMethod<Map>('turnOFF', {
-      'deviceId': device.deviceId,
-      'endpoint': device.endpoint,
-      'subEndpoints': device.subEndpoints,
-    });
-    return TPDeviceControlHelper.handleControlResponse(result);
   }
 
   @override

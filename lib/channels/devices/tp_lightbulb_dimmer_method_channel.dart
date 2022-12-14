@@ -22,15 +22,21 @@ class MethodChannelTpLightbulbDimmerDevice
 
   @override
   Future<TPDeviceControlResponse> turnON(TPDevice device) async {
-    final result = await methodChannel.invokeMethod<Map>(
-        'turnON', {'deviceId': device.deviceId, 'endpoint': device.endpoint});
+    final result = await methodChannel.invokeMethod<Map>('turnON', {
+      'deviceId': device.deviceId,
+      'endpoint': device.endpoint,
+      'subEndpoints': device.subEndpoints,
+    });
     return TPDeviceControlHelper.handleControlResponse(result);
   }
 
   @override
   Future<TPDeviceControlResponse> turnOFF(TPDevice device) async {
-    final result = await methodChannel.invokeMethod<Map>(
-        'turnOFF', {'deviceId': device.deviceId, 'endpoint': device.endpoint});
+    final result = await methodChannel.invokeMethod<Map>('turnOFF', {
+      'deviceId': device.deviceId,
+      'endpoint': device.endpoint,
+      'subEndpoints': device.subEndpoints,
+    });
     return TPDeviceControlHelper.handleControlResponse(result);
   }
 
@@ -40,7 +46,8 @@ class MethodChannelTpLightbulbDimmerDevice
     final result = await methodChannel.invokeMethod<Map>('controlLevel', {
       'deviceId': device.deviceId,
       'endpoint': device.endpoint,
-      'level': min(level, 100)
+      'level': min(level, 100),
+      'subEndpoints': device.subEndpoints,
     });
     return TPDeviceControlHelper.handleControlResponse(result);
   }
@@ -60,6 +67,7 @@ class MethodChannelTpLightbulbDimmerDevice
       'deviceId': device.deviceId,
       'endpoint': device.endpoint,
       'temperatureColor': temperatureColor,
+      'subEndpoints': device.subEndpoints,
     });
     return TPDeviceControlHelper.handleControlResponse(result);
   }
@@ -85,35 +93,40 @@ class MethodChannelTpLightbulbDimmerDevice
     if (event.containsKey(tpReportEventKey)) {
       final map = event[tpReportEventKey] as Map;
       final deviceId = map['deviceId'] as String? ?? '';
+      final endpoint = map['endpoint'] as int?;
       final dataMap = map['data'] as Map? ?? {};
+
+      if (endpoint == null) {
+        return;
+      }
 
       if (dataMap.containsKey('isOn')) {
         final isOn = dataMap['isOn'] as bool? ?? false;
-        TPDeviceEventManager.shared
-            .addEvent(TPLightbudDimmerEventSuccess(deviceId, isOn: isOn));
+        TPDeviceEventManager.shared.addEvent(
+            TPLightbudDimmerEventSuccess(deviceId, endpoint, isOn: isOn));
       } else if (dataMap.containsKey('level')) {
         final level = dataMap['level'] as int? ?? 0;
-        TPDeviceEventManager.shared
-            .addEvent(TPLightbudDimmerEventSuccess(deviceId, level: level));
+        TPDeviceEventManager.shared.addEvent(
+            TPLightbudDimmerEventSuccess(deviceId, endpoint, level: level));
       } else if (dataMap.containsKey('temperatureColor')) {
         final temperatureColor = dataMap['temperatureColor'] as int? ?? 0;
         TPDeviceEventManager.shared.addEvent(TPLightbudDimmerEventSuccess(
-            deviceId,
+            deviceId, endpoint,
             temperatureColor: temperatureColor));
       } else if (dataMap.containsKey('hue')) {
         final hue = dataMap['hue'] as int? ?? 0;
-        TPDeviceEventManager.shared
-            .addEvent(TPLightbudDimmerEventSuccess(deviceId, hue: hue));
+        TPDeviceEventManager.shared.addEvent(
+            TPLightbudDimmerEventSuccess(deviceId, endpoint, hue: hue));
       } else if (dataMap.containsKey('saturation')) {
         final saturation = dataMap['saturation'] as int? ?? 0;
-        TPDeviceEventManager.shared.addEvent(
-            TPLightbudDimmerEventSuccess(deviceId, saturation: saturation));
+        TPDeviceEventManager.shared.addEvent(TPLightbudDimmerEventSuccess(
+            deviceId, endpoint,
+            saturation: saturation));
       } else if (dataMap.containsKey('sensorDetected')) {
         final sensorDetected = dataMap['sensorDetected'] as int? ?? 0;
         TPDeviceEventManager.shared.addEvent(TPLightbudDimmerEventSuccess(
-          deviceId,
-          sensorDetected: sensorDetected != 0 ? true : false,
-        ));
+            deviceId, endpoint,
+            sensorDetected: sensorDetected != 0 ? true : false));
       }
     } else if (event.containsKey(tpReportErrorEventKey)) {
       final map = event[tpReportErrorEventKey] as Map;

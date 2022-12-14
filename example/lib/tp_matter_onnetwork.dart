@@ -5,7 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:tp_flutter_matter_package/models/tp_discover_device.dart';
 import 'package:tp_flutter_matter_package/tp_flutter_matter_package.dart';
-import 'package:tp_flutter_matter_package_example/datas/tp_device_manager.dart';
+import 'package:tp_flutter_matter_package_example/managers/tp_device_manager.dart';
 import 'package:tp_flutter_matter_package_example/tp_matter_qrcode_pairing.dart';
 
 class TPMatterOnNetworkPairing extends StatefulWidget {

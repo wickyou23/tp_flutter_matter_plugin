@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:tp_flutter_matter_package/channels/tp_matter_device_method_interface.dart';
+import 'package:tp_flutter_matter_package/channels/tp_matter_helper.dart';
+import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_discover_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_setup_payload.dart';
 import 'package:tp_flutter_matter_package/tp_matter_channel_const.dart';
@@ -59,7 +61,48 @@ class MethodChannelTpMatterDevice extends TpMatterDevicePlatform {
     return null;
   }
 
-  void preparedThreadPlayload() {}
+  @override
+  Future<TPMatterResponse> saveBindingWithDevice(TPDevice device,
+      Map<TPDeviceClusterIDType, List<TPDevice>> bindingDevices) async {
+    final result =
+        await methodChannel.invokeMethod<Map>('saveBindingWithDeviceId', {
+      'deviceId': device.deviceId,
+      'endpoint': device.endpoint,
+      'bindingDevices': _preparedBindingDevicesData(bindingDevices),
+    });
+
+    return TPMatterHelper.handleControlResponse(result);
+  }
+
+  @override
+  Future<TPMatterResponse> readBindingDatasWithDevice(TPDevice device) async {
+    final result =
+        await methodChannel.invokeMethod<Map>('readBindingDatasWithDeviceId', {
+      'deviceId': device.deviceId,
+      'endpoint': device.endpoint,
+    });
+
+    return TPMatterHelper.handleControlResponse(result);
+  }
+
+  void _preparedThreadPlayload() {}
+
+  List<Map<String, dynamic>> _preparedBindingDevicesData(
+      Map<TPDeviceClusterIDType, List<TPDevice>> bindingDevices) {
+    final List<Map<String, dynamic>> bindingDevicesData = [];
+    bindingDevices.forEach((key, value) {
+      for (var device in value) {
+        bindingDevicesData.add({
+          'fabricIndex': 1,
+          'node': int.parse(device.deviceId),
+          'endpoint': device.endpoint,
+          'cluster': key.value,
+        });
+      }
+    });
+
+    return bindingDevicesData;
+  }
 }
 
 // - (void)retrieveThreadCredentials

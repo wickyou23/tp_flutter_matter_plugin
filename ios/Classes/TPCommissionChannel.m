@@ -37,7 +37,6 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
 
 @property (readwrite) MTRDeviceController* chipController;
 @property (nonatomic, copy, nullable) FlutterEventSink eventSink;
-@property (readwrite, nullable) void* attestationDevice;
 @property (nonatomic, strong) MTRSetupPayload* setupPayload;
 @property (nonatomic, strong) NSData* dataset;
 
@@ -260,7 +259,7 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
     [_chipController setDeviceControllerDelegate:self queue:callbackQueue];
 }
 
-//MARK: - EventSinkÏ
+//MARK: - EventSink
 
 - (void)sendEventSink:(id _Nullable)event {
     if (_eventSink == NULL) {
@@ -352,24 +351,24 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
             typeof(self) strongSelf = weakSelf;
             NSMutableDictionary* metadata = [NSMutableDictionary dictionary];
             for (NSMutableDictionary *mainDict in values) {
-                MTRAttributePath* attributePath = [mainDict objectForKey:@"attributePath"];
-                NSMutableDictionary* endpointMetadata = [metadata objectForKey:attributePath.endpoint];
+                MTRAttributePath* attributePath = [mainDict objectForKey:MTRAttributePathKey];
+                NSMutableDictionary* endpointMetadata = [metadata objectForKey:[attributePath.endpoint stringValue]];
                 if (endpointMetadata == NULL) {
                     NSMutableArray* attributeIds = [NSMutableArray arrayWithObject:attributePath.attribute];
                     NSMutableDictionary* initMetadata = [NSMutableDictionary dictionaryWithDictionary:@{
                         @"clusters": [NSMutableDictionary dictionaryWithDictionary:@{
-                            attributePath.cluster: attributeIds
+                            [attributePath.cluster stringValue]: attributeIds
                         }]
                     }];
                     
-                    [metadata setObject:initMetadata forKey:attributePath.endpoint];
+                    [metadata setObject:initMetadata forKey:[attributePath.endpoint stringValue]];
                 }
                 else {
                     NSMutableDictionary* clustersDict = [endpointMetadata objectForKey:@"clusters"];
                     NSMutableArray* attributeIds = clustersDict[attributePath.cluster];
                     if (attributeIds == NULL) {
                         [clustersDict setObject:[NSMutableArray arrayWithObject:attributePath.attribute]
-                                         forKey:attributePath.cluster];
+                                         forKey:[attributePath.cluster stringValue]];
                     }
                     else {
                         [attributeIds addObject:attributePath.attribute];
@@ -407,7 +406,7 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
     __block NSError* anyError;
     __block NSMutableArray* subDevices = [NSMutableArray array];
     __weak typeof(self) weakSelf = self;
-    [metadata.allKeys enumerateObjectsUsingBlock:^(NSNumber*  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+    [metadata.allKeys enumerateObjectsUsingBlock:^(NSString*  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         typeof(self) strongSelf = weakSelf;
         if (anyError != NULL) {
             [strongSelf sendCommissionSuccessEventSink: @{@"message": @"Status: Waiting for connection with the device"}];
@@ -421,8 +420,14 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
         }
         
         MTRBaseClusterDescriptor* descriptor = [[MTRBaseClusterDescriptor alloc] initWithDevice:device
-                                                                                       endpoint:obj
+                                                                                       endpoint:@([obj integerValue])
                                                                                           queue:strongSelf->comissionQueue];
+        
+        __block NSArray* bindingClusterIds = [NSArray array];
+        [descriptor readAttributeClientListWithCompletion:^(NSArray * _Nullable value, NSError * _Nullable error) {
+            bindingClusterIds = value;
+        }];
+        
         [descriptor readAttributeDeviceTypeListWithCompletion:^(NSArray * _Nullable value, NSError * _Nullable error) {
             anyError = error;
             if (error != NULL) {
@@ -431,20 +436,22 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
             
             typeof(self) strongSelf = weakSelf;
             uint64_t lastId = MTRGetLastPairedDeviceId();
-            NSLog(@"Device attributes of %llu: %@", lastId, value);
+            NSMutableDictionary* deviceMetadata = [NSMutableDictionary dictionaryWithDictionary:[metadata objectForKey:obj]];
+            [deviceMetadata setValue:bindingClusterIds forKey:@"bindingClusterIds"];
+            
             MTRDescriptorClusterDeviceTypeStruct* deviceTypeStruct = (MTRDescriptorClusterDeviceTypeStruct*)[value firstObject];
             if (idx == metadata.count - 1) {
                 if (tpDevice == NULL) {
                     tpDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
                                                     andDeviceType:[deviceTypeStruct.type longLongValue]
-                                                      andEndpoint:obj
-                                                      andMetadata:[metadata objectForKey:obj]];
+                                                      andEndpoint:@([obj integerValue])
+                                                      andMetadata:deviceMetadata];
                 }
                 else {
                     TPDevice* subDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
                                                                andDeviceType:[deviceTypeStruct.type longLongValue]
-                                                                 andEndpoint:obj
-                                                                 andMetadata:[metadata objectForKey:obj]];
+                                                                 andEndpoint:@([obj integerValue])
+                                                                 andMetadata:deviceMetadata];
                     [subDevices addObject:subDevice];
                 }
                 
@@ -458,14 +465,14 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
                 if (tpDevice == NULL) {
                     tpDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
                                                     andDeviceType:[deviceTypeStruct.type longLongValue]
-                                                      andEndpoint:obj
-                                                      andMetadata:[metadata objectForKey:obj]];
+                                                      andEndpoint:@([obj integerValue])
+                                                      andMetadata:deviceMetadata];
                 }
                 else {
                     TPDevice* subDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
                                                                andDeviceType:[deviceTypeStruct.type longLongValue]
-                                                                 andEndpoint:obj
-                                                                 andMetadata:[metadata objectForKey:obj]];
+                                                                 andEndpoint:@([obj integerValue])
+                                                                 andMetadata:deviceMetadata];
                     [subDevices addObject:subDevice];
                 }
             }
@@ -476,8 +483,21 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
 //MARK: - MTRDeviceAttestationDelegate
 
 - (void)deviceAttestationFailedForController:(MTRDeviceController *)controller device:(void *)device error:(NSError *)error {
-    _attestationDevice = device;
-    [self sendEventSink:@{CommissionDeviceAttestationFailedKey: [error localizedDescription]}];
+    __weak typeof(self) weakSelf = self;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        typeof(self) strongSelf = weakSelf;
+        if (strongSelf == NULL) {
+            return;
+        }
+        
+        NSError* attestationError;
+        [strongSelf.chipController continueCommissioningDevice:device
+                                      ignoreAttestationFailure:YES
+                                                         error:&attestationError];
+        if (attestationError != NULL) {
+            [self sendErrorEventSink:[attestationError localizedDescription]];
+        }
+    });
 }
 
 //MARK: - FlutterStreamHandler

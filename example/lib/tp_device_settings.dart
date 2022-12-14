@@ -2,10 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package_example/custom_widgets/TPCupertinoSliverNavigationBarNoLargerTitle.dart';
-import 'package:tp_flutter_matter_package_example/datas/tp_device_manager.dart';
+import 'package:tp_flutter_matter_package_example/managers/tp_device_manager.dart';
 import 'package:tp_flutter_matter_package_example/tp_device_setting_details.dart';
 
 class TPDeviceSettings extends StatelessWidget {
+  static const String routeName = '/TPDeviceSettings';
+
   List<ValueNotifier<TPDevice>> get _devices => TPDeviceManager().devices;
 
   const TPDeviceSettings({super.key});
@@ -56,6 +58,8 @@ class TPDeviceSettings extends StatelessWidget {
                             CupertinoPageRoute(
                               builder: (context) =>
                                   TPDeviceSettingDetails(device: item),
+                              settings: const RouteSettings(
+                                  name: TPDeviceSettingDetails.routeName),
                             ),
                           );
                         }),

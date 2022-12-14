@@ -4,12 +4,18 @@ import 'package:flutter/material.dart';
 
 class TPCupertinoSliverNavigationBarNoLargerTitle
     extends SliverPersistentHeaderDelegate {
-  TPCupertinoSliverNavigationBarNoLargerTitle(this.mainContext,
-      {this.key, this.title = '', this.previousPageTitle = ''});
+  TPCupertinoSliverNavigationBarNoLargerTitle(
+    this.mainContext, {
+    this.key,
+    this.title = '',
+    this.previousPageTitle = '',
+    this.trailing,
+  });
 
   final BuildContext mainContext;
   final String title;
   final String previousPageTitle;
+  final Widget? trailing;
   final Key? key;
 
   @override
@@ -32,6 +38,7 @@ class TPCupertinoSliverNavigationBarNoLargerTitle
             ),
       ),
       previousPageTitle: previousPageTitle,
+      trailing: trailing,
     );
   }
 

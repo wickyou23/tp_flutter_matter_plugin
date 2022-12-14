@@ -2,9 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package_example/custom_widgets/TPCupertinoSliverNavigationBarNoLargerTitle.dart';
-import 'package:tp_flutter_matter_package_example/datas/tp_device_manager.dart';
+import 'package:tp_flutter_matter_package_example/managers/tp_device_manager.dart';
+import 'package:tp_flutter_matter_package_example/tp_device_binding_setting.dart';
 
 class TPDeviceSettingDetails extends StatefulWidget {
+  static const routeName = '/TPDeviceSettingDetails';
+
   const TPDeviceSettingDetails({super.key, required this.device});
 
   final ValueNotifier<TPDevice> device;
@@ -16,6 +19,7 @@ class TPDeviceSettingDetails extends StatefulWidget {
 class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
   final _deviceNameTextFieldController = TextEditingController();
   final _deviceFocusNode = FocusNode();
+  final _isUnpairLoading = ValueNotifier<bool>(false);
 
   @override
   void initState() {
@@ -25,46 +29,49 @@ class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      backgroundColor: Colors.grey[100]!,
-      child: CustomScrollView(
-        slivers: [
-          ValueListenableBuilder(
-            key: const ValueKey('SliverPersistentHeader'),
-            valueListenable: widget.device,
-            builder: ((_, value, __) {
-              return SliverPersistentHeader(
-                delegate: TPCupertinoSliverNavigationBarNoLargerTitle(
-                  context,
-                  title: value.getDeviceName(),
-                  previousPageTitle: 'Settings',
-                ),
-                pinned: true,
-                floating: false,
-              );
-            }),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(
-              vertical: 30,
-              horizontal: 16,
-            ),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _generalWidget(),
-                  const SizedBox(height: 30),
-                  _actionsWidget(),
-                  const SizedBox(height: 40),
-                  _unpairWidget(),
-                ],
+    return WillPopScope(
+        child: CupertinoPageScaffold(
+          backgroundColor: Colors.grey[100]!,
+          child: CustomScrollView(
+            slivers: [
+              ValueListenableBuilder(
+                key: const ValueKey('SliverPersistentHeader'),
+                valueListenable: widget.device,
+                builder: ((_, value, __) {
+                  return SliverPersistentHeader(
+                    delegate: TPCupertinoSliverNavigationBarNoLargerTitle(
+                      context,
+                      title: value.getDeviceName(),
+                      previousPageTitle: 'Settings',
+                    ),
+                    pinned: true,
+                    floating: false,
+                  );
+                }),
               ),
-            ),
-          )
-        ],
-      ),
-    );
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 30,
+                  horizontal: 16,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _generalWidget(),
+                      _actionsWidget(),
+                      const SizedBox(height: 40),
+                      _unpairWidget(),
+                    ],
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+        onWillPop: () async {
+          return true;
+        });
   }
 
   Widget _generalWidget() {
@@ -145,7 +152,17 @@ class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
   Widget _actionsWidget() {
     Widget bindingAction() {
       return CupertinoButton(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.of(context).push(
+            CupertinoPageRoute(
+              builder: (_) => TPDeviceBindingSetting(
+                device: widget.device,
+              ),
+              settings:
+                  const RouteSettings(name: TPDeviceBindingSetting.routeName),
+            ),
+          );
+        },
         padding: EdgeInsets.zero,
         child: SizedBox(
           key: const ValueKey('bindingActionWidget'),
@@ -170,59 +187,100 @@ class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
       );
     }
 
-    return Container(
-      key: const ValueKey('actionsWidget'),
-      alignment: Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 16.0),
-            child: Text(
-              'ACTIONS',
-              style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
+    return Visibility(
+      visible: widget.device.value.isBindingSupported,
+      child: Container(
+        key: const ValueKey('actionsWidget'),
+        alignment: Alignment.centerLeft,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 30),
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0),
+              child: Text(
+                'ACTIONS',
+                style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                      color: Colors.grey,
+                      fontSize: 12,
+                    ),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.only(left: 16.0, right: 8.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-            child: bindingAction(),
-          )
-        ],
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.only(left: 16.0, right: 8.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: bindingAction(),
+            )
+          ],
+        ),
       ),
     );
   }
 
   Widget _unpairWidget() {
     return CupertinoButton(
-      onPressed: () {},
+      onPressed: () async {
+        _unpairDevice();
+      },
       padding: EdgeInsets.zero,
       child: Container(
-        padding: const EdgeInsets.only(left: 16.0, right: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8.0),
         ),
         child: SizedBox(
           height: 50,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Unpair Device',
-              style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-                    color: Colors.red,
-                  ),
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Unpair Device',
+                style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                      color: Colors.red,
+                    ),
+              ),
+              ValueListenableBuilder(
+                valueListenable: _isUnpairLoading,
+                builder: ((_, value, __) {
+                  return Visibility(
+                    visible: value,
+                    child: const CupertinoActivityIndicator(),
+                  );
+                }),
+              ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _unpairDevice() async {
+    final success = await widget.device.value.unpairDevice();
+    if (!success) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('[Error]: Unpair failed'),
+          ),
+        );
+    } else {
+      await TPDeviceManager().removeDevice(widget.device.value.deviceId);
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).popUntil((route) => route.settings.name == '/');
+    }
   }
 }

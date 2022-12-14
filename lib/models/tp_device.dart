@@ -1,8 +1,11 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:tp_flutter_matter_package/models/tp_device_lightbulb_dimmer.dart';
+import 'package:tp_flutter_matter_package/channels/tp_matter_device_method_interface.dart';
+import 'package:tp_flutter_matter_package/models/tp_binding_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb.dart';
+import 'package:tp_flutter_matter_package/models/tp_device_lightbulb_dimmer.dart';
+import 'package:tp_flutter_matter_package/models/tp_device_lightswitch.dart';
 
 enum TPDeviceType {
   kLightbulb(0x0100),
@@ -18,6 +21,7 @@ enum TPDeviceType {
   kThermostat(0x0301),
   kTemperatureSensor(0x0302),
   kFlowSensor(0x0306),
+  kGenericSwitch(0x000f),
   kUnknown(0xffff);
 
   factory TPDeviceType.fromValue(int value) {
@@ -132,6 +136,10 @@ enum TPDeviceClusterIDType {
 
   const TPDeviceClusterIDType(this.value);
   final int value;
+
+  static TPDeviceClusterIDType? fromValue(int value) {
+    return values.firstWhereOrNull((e) => e.value == value);
+  }
 }
 
 enum TPDeviceErrorType {
@@ -164,11 +172,22 @@ enum TPDeviceErrorType {
 }
 
 class TPDevice {
-  TPDevice(this.deviceId, this.deviceName, this.deviceType, this.createdDate,
-      this.endpoint, this.subDevices, this.isOn, this.metadata);
+  TPDevice(
+    this.deviceId,
+    this.subDeviceId,
+    this.deviceName,
+    this.deviceType,
+    this.createdDate,
+    this.endpoint,
+    this.subDevices,
+    this.isOn,
+    this.metadata, {
+    this.bindingDevices = const [],
+  });
 
   TPDevice.fromJson(Map json)
       : deviceId = json['deviceId'] as String,
+        subDeviceId = TPDevice.getSubDeviceId(json),
         deviceName = json['deviceName'] as String? ?? '',
         deviceType =
             TPDeviceType.fromValue(json['deviceType'] as int? ?? 0xffff),
@@ -181,7 +200,13 @@ class TPDevice {
         deviceError = (json['deviceError'] is int)
             ? TPDeviceErrorType.fromValue(json['deviceError'])
             : null,
-        metadata = TPDevice.convertDeviceMetadata(json['metadata']);
+        metadata = TPDevice.convertDeviceMetadata(json['metadata']),
+        bindingDevices = (json['bindingDevices'] as List?)
+                ?.map((e) => TPBindingDevice.fromJson(e as Map))
+                .toList() ??
+            [] {
+    filterDeviceClusters();
+  }
 
   static TPDevice getDeviceByType(Map json) {
     final deviceType =
@@ -191,18 +216,20 @@ class TPDevice {
         return TPLightbulbDimmer.fromJson(json);
       case TPDeviceType.kLightbulb:
         return TPLightbulb.fromJson(json);
+      case TPDeviceType.kSwitch:
+        return TPLightSwitch.fromJson(json);
       default:
         return TPDevice.fromJson(json);
     }
   }
 
-  static Map<TPDeviceType, TPDevice> getSubDevicesByDeviceTypes(Map json) {
-    Map<TPDeviceType, TPDevice> subDevices = {};
+  static Map<int, TPDevice> getSubDevicesByDeviceTypes(Map json) {
+    Map<int, TPDevice> subDevices = {};
     final subDeviceListJson =
         (json['subDevices'] as List?)?.map((e) => e as Map) ?? [];
     for (var subDeviceJson in subDeviceListJson) {
-      final subDevice = TPDevice.fromJson(subDeviceJson);
-      subDevices.update(subDevice.deviceType, (value) => subDevice,
+      final subDevice = TPDevice.getDeviceByType(subDeviceJson);
+      subDevices.update(subDevice.endpoint, (value) => subDevice,
           ifAbsent: () => subDevice);
     }
 
@@ -221,23 +248,104 @@ class TPDevice {
     return jsonMap.map((key, value) => MapEntry<String, dynamic>(key, value));
   }
 
+  static String? getSubDeviceId(Map json) {
+    final subDeviceId = json['subDeviceId'] as String?;
+    if (subDeviceId != null) {
+      return subDeviceId;
+    }
+
+    final deviceId = json['deviceId'] as String?;
+    final endpoint = json['endpoint'] as int?;
+
+    if (deviceId != null && endpoint != null && endpoint != 1) {
+      return '${deviceId}_$endpoint';
+    }
+
+    return null;
+  }
+
   final String deviceId;
+  final String? subDeviceId;
   final String deviceName;
   final TPDeviceType deviceType;
   final DateTime createdDate;
   final int endpoint;
-  final Map<TPDeviceType, TPDevice> subDevices;
+  final Map<int, TPDevice> subDevices;
   final Map<String, dynamic> metadata;
+  final List<TPBindingDevice> bindingDevices;
+  final defaultClusterControllers = {
+    TPDeviceClusterIDType.kTPDeviceClusterIDTypeOnOffID
+  };
+
+  final defaultClusterActions = {
+    TPDeviceClusterIDType.kTPDeviceClusterIDTypeBindingID
+  };
+
+  bool isOn;
+  Set<TPDeviceClusterIDType> bindingClusterControllers = {};
+  Set<TPDeviceClusterIDType> clusterActions = {};
+  Set<TPDeviceClusterIDType> clusterControllers = {
+    TPDeviceClusterIDType.kTPDeviceClusterIDTypeOnOffID
+  };
+
+  bool get isBindingSupported =>
+      clusterActions
+          .contains(TPDeviceClusterIDType.kTPDeviceClusterIDTypeBindingID) &&
+      bindingClusterControllers.isNotEmpty;
 
   TPDeviceErrorType? deviceError;
   bool get isError => deviceError != null;
-  bool isOn;
+
+  List<int> get subEndpoints =>
+      subDevices.values.map((e) => e.endpoint).toList();
+
+  bool get isMainDevice => subDeviceId == null;
 
   bool checkClusterIdExisted(TPDeviceClusterIDType clusterId) {
     final clusterIds = metadata["clusters"] as Map? ?? {};
     return clusterIds.keys.firstWhereOrNull(
             (element) => element == clusterId.value.toString()) !=
         null;
+  }
+
+  Future<bool> subscribeDevice() {
+    throw UnimplementedError('subscribeDevice() method has not implement');
+  }
+
+  Future<bool> unpairDevice() async {
+    return await TpMatterDevicePlatform.instance.unpairDeviceById(deviceId);
+  }
+
+  Future<void> filterDeviceClusters() async {
+    final clusterIds = metadata["clusters"] as Map? ?? {};
+    final actions = Set.from(defaultClusterActions);
+    final controllers = Set.from(defaultClusterControllers);
+    for (String element in clusterIds.keys) {
+      final clusterType = TPDeviceClusterIDType.fromValue(int.parse(element));
+      if (clusterType == null) continue;
+
+      if (actions.contains(clusterType)) {
+        clusterActions.add(clusterType);
+        actions.remove(clusterType);
+      }
+
+      if (defaultClusterControllers.contains(clusterType)) {
+        clusterControllers.add(clusterType);
+        controllers.remove(clusterType);
+      }
+
+      if (actions.isEmpty && controllers.isEmpty) {
+        return;
+      }
+    }
+
+    final bindingClusterIds = metadata["bindingClusterIds"] as List? ?? [];
+    for (int element in bindingClusterIds) {
+      final bindingClusterType = TPDeviceClusterIDType.fromValue(element);
+      if (bindingClusterType != null) {
+        bindingClusterControllers.add(bindingClusterType);
+      }
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -250,7 +358,16 @@ class TPDevice {
       'endpoint': endpoint,
       'isOn': isOn,
       'metadata': metadata.toJsonStr(),
+      'bindingDevices': bindingDevices.map((e) => e.toJson()).toList(),
     };
+
+    if (subDeviceId != null) {
+      json.update(
+        'subDeviceId',
+        (value) => subDeviceId,
+        ifAbsent: () => subDeviceId,
+      );
+    }
 
     if (deviceError != null) {
       json.update(
@@ -263,20 +380,17 @@ class TPDevice {
     return json;
   }
 
-  Future<bool> subscribeDevice() {
-    throw UnimplementedError('subscribeDevice() method has not implement');
-  }
-
   TPDevice copyWith({
-    String? deviceId,
     String? deviceName,
     TPDeviceType? deviceType,
     DateTime? createdDate,
     bool? isOn,
     Map<String, dynamic>? metadata,
+    List<TPBindingDevice>? bindingDevices,
   }) {
     return TPDevice(
-      deviceId ?? this.deviceId,
+      deviceId,
+      subDeviceId,
       deviceName ?? this.deviceName,
       deviceType ?? this.deviceType,
       createdDate ?? this.createdDate,
@@ -284,7 +398,12 @@ class TPDevice {
       subDevices,
       isOn ?? this.isOn,
       metadata ?? this.metadata,
-    )..deviceError = deviceError;
+      bindingDevices: bindingDevices ?? this.bindingDevices,
+    )
+      ..deviceError = deviceError
+      ..clusterActions = clusterActions
+      ..clusterControllers = clusterControllers
+      ..bindingClusterControllers = bindingClusterControllers;
   }
 }
 

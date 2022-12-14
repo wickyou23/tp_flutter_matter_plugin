@@ -1,11 +1,12 @@
 import 'package:tp_flutter_matter_package/channels/devices/tp_device_control_manager.dart';
 import 'package:tp_flutter_matter_package/channels/devices/tp_lightbulb_dimmer_method_interface.dart';
-import 'package:tp_flutter_matter_package/channels/devices/tp_lightbuld_method_interface.dart';
+import 'package:tp_flutter_matter_package/models/tp_binding_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
 
 class TPLightbulbDimmer extends TPDevice {
   TPLightbulbDimmer(
     super.deviceId,
+    super.subDeviceId,
     super.deviceName,
     super.deviceType,
     super.createdDate,
@@ -17,8 +18,9 @@ class TPLightbulbDimmer extends TPDevice {
     this.temperatureColor,
     this.hue,
     this.saturation,
-    this.sensorDetected,
-  );
+    this.sensorDetected, {
+    super.bindingDevices = const [],
+  });
 
   TPLightbulbDimmer.fromJson(Map json)
       : level = json['level'] as int? ?? 0,
@@ -34,21 +36,10 @@ class TPLightbulbDimmer extends TPDevice {
   int saturation;
   bool sensorDetected;
 
-  bool? _isSupportedLevelControl;
-  bool get isSupportedLevelControl {
-    _isSupportedLevelControl ??= checkClusterIdExisted(
-        TPDeviceClusterIDType.kTPDeviceClusterIDTypeLevelControlID);
-
-    return _isSupportedLevelControl!;
-  }
-
-  bool? _isSupportedColorControl;
-  bool get isSupportedColorControl {
-    _isSupportedColorControl ??= checkClusterIdExisted(
-        TPDeviceClusterIDType.kTPDeviceClusterIDTypeColorControlID);
-
-    return _isSupportedColorControl!;
-  }
+  bool get isSupportedLevelControl => clusterControllers
+      .contains(TPDeviceClusterIDType.kTPDeviceClusterIDTypeLevelControlID);
+  bool get isSupportedColorControl => clusterControllers
+      .contains(TPDeviceClusterIDType.kTPDeviceClusterIDTypeColorControlID);
 
   bool? _isSupportedSensorDevice;
   bool get isSupportedSensorDevice {
@@ -57,6 +48,13 @@ class TPLightbulbDimmer extends TPDevice {
 
     return _isSupportedSensorDevice!;
   }
+
+  @override
+  Set<TPDeviceClusterIDType> get defaultClusterControllers => {
+        TPDeviceClusterIDType.kTPDeviceClusterIDTypeOnOffID,
+        TPDeviceClusterIDType.kTPDeviceClusterIDTypeLevelControlID,
+        TPDeviceClusterIDType.kTPDeviceClusterIDTypeColorControlID
+      };
 
   @override
   Map<String, dynamic> toJson() {
@@ -139,7 +137,6 @@ class TPLightbulbDimmer extends TPDevice {
 
   @override
   TPLightbulbDimmer copyWith({
-    String? deviceId,
     String? deviceName,
     TPDeviceType? deviceType,
     DateTime? createdDate,
@@ -150,9 +147,11 @@ class TPLightbulbDimmer extends TPDevice {
     int? saturation,
     bool? sensorDetected,
     Map<String, dynamic>? metadata,
+    List<TPBindingDevice>? bindingDevices,
   }) {
     return TPLightbulbDimmer(
-      deviceId ?? this.deviceId,
+      deviceId,
+      subDeviceId,
       deviceName ?? this.deviceName,
       deviceType ?? this.deviceType,
       createdDate ?? this.createdDate,
@@ -165,6 +164,11 @@ class TPLightbulbDimmer extends TPDevice {
       hue ?? this.hue,
       saturation ?? this.saturation,
       sensorDetected ?? this.sensorDetected,
-    )..deviceError = deviceError;
+      bindingDevices: bindingDevices ?? this.bindingDevices,
+    )
+      ..deviceError = deviceError
+      ..clusterActions = clusterActions
+      ..clusterControllers = clusterControllers
+      ..bindingClusterControllers = bindingClusterControllers;
   }
 }

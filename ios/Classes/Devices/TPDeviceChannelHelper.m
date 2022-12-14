@@ -14,9 +14,13 @@ NSString* const ControlSuccessKey = @"ControlSuccessKey";
 NSString* const ReportEventKey = @"ReportEventKey";
 NSString* const ReportErrorEventKey = @"ReportErrorEventKey";
 
+NSString* const sendErrorKey = @"sendErrorKey";
+NSString* const sendSuccessKey = @"sendSuccessKey";
+
 @implementation TPDeviceChannelHelper
 
 + (void)verifyClusterIdWithEndpoint:(NSNumber*)endpoint
+                    andSubEndpoints:(NSMutableArray*)subEndpoints
                        andClusterId:(NSNumber*)clusterId
                  andDeviceConnected:(MTRBaseDevice*)device
                            andQueue:(dispatch_queue_t)queue
@@ -41,7 +45,14 @@ NSString* const ReportErrorEventKey = @"ReportErrorEventKey";
                 return;
             }
             
-            [TPDeviceChannelHelper verifyClusterIdWithEndpoint:@(0)
+            NSNumber* nextEndpoint = @(0);
+            if (subEndpoints.count != 0) {
+                nextEndpoint = [subEndpoints lastObject];
+                [subEndpoints removeLastObject];
+            }
+            
+            [TPDeviceChannelHelper verifyClusterIdWithEndpoint:nextEndpoint
+                                               andSubEndpoints:subEndpoints
                                                   andClusterId:clusterId
                                             andDeviceConnected:device
                                                       andQueue:queue
@@ -84,16 +95,20 @@ NSString* const ReportErrorEventKey = @"ReportErrorEventKey";
 
 + (void)sendReportEventSink:(FlutterEventSink)eventSink
                 andDeviceId:(NSString*)deviceId
+                andEndpoint:(NSNumber*)endpoint
                     andData:(id _Nullable)data {
     if (eventSink == NULL) {
         return;
     }
     
-    eventSink(@{ReportEventKey: @{@"deviceId": deviceId, @"data": data}});
+    eventSink(@{ReportEventKey: @{@"deviceId": deviceId,
+                                  @"endpoint": endpoint,
+                                  @"data": data}});
 }
 
 + (void)sendReportErrorEventSink:(FlutterEventSink)eventSink
                      andDeviceId:(NSString*)deviceId
+                     andEndpoint:(NSNumber* _Nullable)endpoint
                         andError:(NSError*)error
                       andMessage:(NSString* _Nullable)message {
     if (eventSink == NULL) {
@@ -108,7 +123,48 @@ NSString* const ReportErrorEventKey = @"ReportErrorEventKey";
         errorType = TPReportEventError;
     }
     
-    eventSink(@{ReportErrorEventKey: @{@"deviceId": deviceId, @"errorType": @(errorType), @"errorMessage": message}});
+    if (endpoint == NULL) {
+        eventSink(@{ReportErrorEventKey: @{@"deviceId": deviceId,
+                                           @"errorType": @(errorType),
+                                           @"errorMessage": message}});
+    }
+    else {
+        eventSink(@{ReportErrorEventKey: @{@"deviceId": deviceId,
+                                           @"endpoint": endpoint,
+                                           @"errorType": @(errorType),
+                                           @"errorMessage": message}});
+    }
+}
+
+//MARK: - Evensink Common
+
++ (void)sendErrorResult:(FlutterResult)result
+            andDeviceId:(NSString*)deviceId
+               andError:(NSError* _Nullable)error
+             andMessage:(NSString* _Nullable)message {
+    if (result == NULL) {
+        return;
+    }
+    
+    TPDeviceErrorType errorType;
+    if (error.code == MTRErrorCodeTimeout) {
+        errorType = TPControlTimeoutError;
+    }
+    else {
+        errorType = TPControlUnknowError;
+    }
+    
+    result(@{sendErrorKey: @{@"deviceId": deviceId, @"errorType": @(errorType), @"errorMessage": message}});
+}
+
++ (void)sendSuccessResult:(FlutterResult)result
+              andDeviceId:(NSString*)deviceId
+                  andData:(id _Nullable)data {
+    if (result == NULL) {
+        return;
+    }
+    
+    result(@{sendSuccessKey: @{@"deviceId": deviceId, @"data": data}});
 }
 
 @end

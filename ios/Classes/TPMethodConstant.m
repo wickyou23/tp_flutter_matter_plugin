@@ -7,12 +7,21 @@
 
 #import "TPMethodConstant.h"
 
+//Device
+NSString* const TPMethodGetPlatformVersion = @"getPlatformVersion";
+NSString* const TPMethodGetDiscoverDevice = @"getDiscoverDevice";
+NSString* const TPMethodGetDeviceList = @"getDeviceList";
+NSString* const TPMethodUnpairDeviceById = @"unpairDeviceById";
+NSString* const TPMethodGetSetupPayloadFromQRCodeString = @"getSetupPayloadFromQRCodeString";
+NSString* const TPMethodSaveBindingWithDeviceId = @"saveBindingWithDeviceId";
+NSString* const TPMethodReadBindingDatasWithDeviceId = @"readBindingDatasWithDeviceId";
+
 //Basic
-NSString* const methodTurnOnName = @"turnON";
-NSString* const methodTurnOffName = @"turnOFF";
+NSString* const TPMethodTurnOnName = @"turnON";
+NSString* const TPMethodTurnOffName = @"turnOFF";
 
 //Dimmer
-NSString* const methodLevelControlName = @"controlLevel";
-NSString* const methodSubscribeName = @"subscribeWithDeviceId";
-NSString* const methodControlTemperatureColorName = @"controlTemperatureColor";
-NSString* const methodcontrolHUEAndSaturationColorName = @"controlHUEAndSaturationColor";
+NSString* const TPMethodLevelControlName = @"controlLevel";
+NSString* const TPMethodSubscribeName = @"subscribeWithDeviceId";
+NSString* const TPMethodControlTemperatureColorName = @"controlTemperatureColor";
+NSString* const TPMethodcontrolHUEAndSaturationColorName = @"controlHUEAndSaturationColor";

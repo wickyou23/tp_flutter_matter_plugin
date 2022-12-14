@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:tp_flutter_matter_package/models/tp_setup_payload.dart';
 import 'package:tp_flutter_matter_package/tp_flutter_matter_package.dart';
-import 'package:tp_flutter_matter_package_example/datas/tp_device_manager.dart';
+import 'package:tp_flutter_matter_package_example/managers/tp_device_manager.dart';
 
 enum CommissionStep {
   kScanQRCode,

@@ -35,59 +35,75 @@
 - (instancetype)init {
     if (self = [super init]) {
         chipController = InitializeMTR();
-        deviceChannelQueue = dispatch_queue_create("com.device.lightbulbdimmer.channel.queue", DISPATCH_QUEUE_SERIAL);
-        deviceEventQueue = dispatch_queue_create("com.device.lightbulbdimmer.event.queue", DISPATCH_QUEUE_SERIAL);
+        deviceChannelQueue = dispatch_queue_create("com.device.lightbulbdimmer.channel.queue", DISPATCH_QUEUE_CONCURRENT);
+        deviceEventQueue = dispatch_queue_create("com.device.lightbulbdimmer.event.queue", DISPATCH_QUEUE_CONCURRENT);
     }
     
     return self;
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
-    if ([methodTurnOnName isEqualToString:call.method]) {
+    if ([TPMethodTurnOnName isEqualToString:call.method]) {
         NSDictionary* args = (NSDictionary*)call.arguments;
         NSString* deviceId = args[@"deviceId"];
         NSNumber* endpoint = args[@"endpoint"];
-        [self turnOnOff:deviceId andEndpoint:endpoint andOnOff:YES andResult:result];
+        NSArray* subEndpoints = args[@"subEndpoints"];
+        [self turnOnOff:deviceId
+            andEndpoint:endpoint
+        andSubEndpoints:subEndpoints
+               andOnOff:YES
+              andResult:result];
     }
-    else if ([methodTurnOffName isEqualToString:call.method]) {
+    else if ([TPMethodTurnOffName isEqualToString:call.method]) {
         NSDictionary* args = (NSDictionary*)call.arguments;
         NSString* deviceId = args[@"deviceId"];
         NSNumber* endpoint = args[@"endpoint"];
-        [self turnOnOff:deviceId andEndpoint:endpoint andOnOff:NO andResult:result];
+        NSArray* subEndpoints = args[@"subEndpoints"];
+        [self turnOnOff:deviceId
+            andEndpoint:endpoint
+        andSubEndpoints:subEndpoints
+               andOnOff:NO
+              andResult:result];
     }
-    else if ([methodSubscribeName isEqualToString:call.method]) {
+    else if ([TPMethodSubscribeName isEqualToString:call.method]) {
         NSDictionary* args = (NSDictionary*)call.arguments;
         NSString* deviceId = args[@"deviceId"];
         result(@([self subscribeWithDeviceId:deviceId]));
     }
-    else if ([methodLevelControlName isEqualToString:call.method]) {
+    else if ([TPMethodLevelControlName isEqualToString:call.method]) {
         NSDictionary* args = (NSDictionary*)call.arguments;
         NSString* deviceId = args[@"deviceId"];
         NSNumber* level = args[@"level"];
         NSNumber* endpoint = args[@"endpoint"];
+        NSArray* subEndpoints = args[@"subEndpoints"];
         [self controlLevelWithDeviceId:deviceId
                            andEndpoint:endpoint
+                       andSubEndpoints:subEndpoints
                               andLevel:level
                              andResult: result];
     }
-    else if ([methodControlTemperatureColorName isEqual:call.method]) {
+    else if ([TPMethodControlTemperatureColorName isEqual:call.method]) {
         NSDictionary* args = (NSDictionary*)call.arguments;
         NSString* deviceId = args[@"deviceId"];
         NSNumber* temperature = args[@"temperatureColor"];
         NSNumber* endpoint = args[@"endpoint"];
+        NSArray* subEndpoints = args[@"subEndpoints"];
         [self controlTemperatureColorWithDeviceId:deviceId
                                       andEndpoint:endpoint
+                                  andSubEndpoints:subEndpoints
                               andTemperatureColor:temperature
                                         andResult: result];
     }
-    else if ([methodcontrolHUEAndSaturationColorName isEqual:call.method]) {
+    else if ([TPMethodcontrolHUEAndSaturationColorName isEqual:call.method]) {
         NSDictionary* args = (NSDictionary*)call.arguments;
         NSString* deviceId = args[@"deviceId"];
         NSNumber* hue = args[@"hue"];
         NSNumber* saturation = args[@"saturation"];
         NSNumber* endpoint = args[@"endpoint"];
+        NSArray* subEndpoints = args[@"subEndpoints"];
         [self controlHueAndSaturationColorWithDeviceId:deviceId
                                            andEndpoint:endpoint
+                                       andSubEndpoints:subEndpoints
                                                 andHUE:hue
                                          andSaturation:saturation
                                              andResult:result];
@@ -97,7 +113,11 @@
     }
 }
 
-- (void)turnOnOff:(NSString*)deviceId andEndpoint:(NSNumber*)endpoint andOnOff:(BOOL)onOff andResult:(FlutterResult)result {
+- (void)turnOnOff:(NSString*)deviceId
+      andEndpoint:(NSNumber*)endpoint
+  andSubEndpoints:(NSArray*)subEndpoints
+         andOnOff:(BOOL)onOff
+        andResult:(FlutterResult)result {
     __weak typeof(self) weakSelf = self;
     BOOL isConnected = MTRGetConnectedDeviceWithID([deviceId toUInt64], ^(MTRBaseDevice * _Nullable chipDevice, NSError * _Nullable error) {
         if (chipDevice) {
@@ -105,7 +125,6 @@
                 typeof(self) strongSelf = weakSelf;
                 if (endpointError != NULL) {
                     NSLog(@"[DeviceControl] Status: Control failed");
-                    TPDeviceErrorType errorType = endpointError.code == MTRErrorCodeTimeout ? TPControlTimeoutError : TPControlUnknowError;
                     [TPDeviceChannelHelper sendControlErrorResult:result
                                                       andDeviceId:deviceId
                                                          andError:endpointError
@@ -153,6 +172,7 @@
             
             typeof(self) strongSelf = weakSelf;
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:endpoint
+                                               andSubEndpoints:[NSMutableArray arrayWithArray:subEndpoints]
                                                   andClusterId:@(MTRClusterIDTypeOnOffID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue
@@ -175,6 +195,7 @@
 
 - (void)controlLevelWithDeviceId:(NSString*)deviceId
                      andEndpoint:(NSNumber*)endpoint
+                 andSubEndpoints:(NSArray*)subEndpoints
                         andLevel:(NSNumber*)level
                        andResult:(FlutterResult)result {
     __weak typeof(self) weakSelf = self;
@@ -213,6 +234,7 @@
             
             typeof(self) strongSelf = weakSelf;
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:endpoint
+                                               andSubEndpoints:[NSMutableArray arrayWithArray:subEndpoints]
                                                   andClusterId:@(MTRClusterIDTypeLevelControlID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue
@@ -235,6 +257,7 @@
 
 - (void)controlTemperatureColorWithDeviceId:(NSString*)deviceId
                                 andEndpoint:(NSNumber*)endpoint
+                            andSubEndpoints:(NSArray*)subEndpoints
                         andTemperatureColor:(NSNumber*)temperature
                                   andResult:(FlutterResult)result {
     __weak typeof(self) weakSelf = self;
@@ -265,13 +288,15 @@
                     }
                     else {
                         [TPDeviceChannelHelper sendControlSuccessResult:result
-                                                            andDeviceId:deviceId andData:@(TRUE)];
+                                                            andDeviceId:deviceId
+                                                                andData:@(TRUE)];
                     }
                 }];
             };
             
             typeof(self) strongSelf = weakSelf;
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:endpoint
+                                               andSubEndpoints:[NSMutableArray arrayWithArray:subEndpoints]
                                                   andClusterId:@(MTRClusterIDTypeColorControlID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue
@@ -294,6 +319,7 @@
 
 - (void)controlHueAndSaturationColorWithDeviceId:(NSString*)deviceId
                                      andEndpoint:(NSNumber*)endpoint
+                                 andSubEndpoints:(NSArray*)subEndpoints
                                           andHUE:(NSNumber*)hue
                                    andSaturation:(NSNumber*)saturation
                                        andResult:(FlutterResult)result {
@@ -334,6 +360,7 @@
             
             typeof(self) strongSelf = weakSelf;
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:endpoint
+                                               andSubEndpoints:[NSMutableArray arrayWithArray:subEndpoints]
                                                   andClusterId:@(MTRClusterIDTypeColorControlID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue
@@ -368,11 +395,13 @@
                     NSLog(@"Error reading on/off: %@", report.error);
                     [TPDeviceChannelHelper sendReportErrorEventSink:strongSelf->eventSink
                                                         andDeviceId:deviceId
+                                                        andEndpoint:report.path.endpoint
                                                            andError:report.error
                                                          andMessage:[report.error description]];
                 } else {
                     [TPDeviceChannelHelper sendReportEventSink:strongSelf->eventSink
                                                    andDeviceId:deviceId
+                                                   andEndpoint:report.path.endpoint
                                                        andData:@{@"isOn": (NSNumber *)report.value}];
                 }
             }
@@ -382,11 +411,13 @@
                     NSLog(@"Error reading current level: %@", report.error);
                     [TPDeviceChannelHelper sendReportErrorEventSink:strongSelf->eventSink
                                                         andDeviceId:deviceId
+                                                        andEndpoint:report.path.endpoint
                                                            andError:report.error
                                                          andMessage:[report.error description]];
                 } else {
                     [TPDeviceChannelHelper sendReportEventSink:strongSelf->eventSink
                                                    andDeviceId:deviceId
+                                                   andEndpoint:report.path.endpoint
                                                        andData:@{@"level": (NSNumber *)report.value}];
                 }
             }
@@ -395,6 +426,7 @@
                     NSLog(@"Error reading color control: %@", report.error);
                     [TPDeviceChannelHelper sendReportErrorEventSink:strongSelf->eventSink
                                                         andDeviceId:deviceId
+                                                        andEndpoint:report.path.endpoint
                                                            andError:report.error
                                                          andMessage:[report.error description]];
                 } else {
@@ -402,16 +434,19 @@
                     if ([report.path.attribute isEqualToNumber:@(MTRAttributeIDTypeClusterColorControlAttributeColorTemperatureMiredsID)]) {
                         [TPDeviceChannelHelper sendReportEventSink:strongSelf->eventSink
                                                        andDeviceId:deviceId
+                                                       andEndpoint:report.path.endpoint
                                                            andData:@{@"temperatureColor": (NSNumber *)report.value}];
                     }
                     else if ([report.path.attribute isEqualToNumber:@(MTRAttributeIDTypeClusterColorControlAttributeCurrentHueID)]) {
                         [TPDeviceChannelHelper sendReportEventSink:strongSelf->eventSink
                                                        andDeviceId:deviceId
+                                                       andEndpoint:report.path.endpoint
                                                            andData:@{@"hue": (NSNumber *)report.value}];
                     }
                     else if ([report.path.attribute isEqualToNumber:@(MTRAttributeIDTypeClusterColorControlAttributeCurrentSaturationID)]) {
                         [TPDeviceChannelHelper sendReportEventSink:strongSelf->eventSink
                                                        andDeviceId:deviceId
+                                                       andEndpoint:report.path.endpoint
                                                            andData:@{@"saturation": (NSNumber *)report.value}];
                     }
                 }
@@ -422,12 +457,14 @@
                     NSLog(@"Error reading current level: %@", report.error);
                     [TPDeviceChannelHelper sendReportErrorEventSink:strongSelf->eventSink
                                                         andDeviceId:deviceId
+                                                        andEndpoint:report.path.endpoint
                                                            andError:report.error
                                                          andMessage:[report.error description]];
                 } else {
                     [TPDeviceChannelHelper sendReportEventSink:strongSelf->eventSink
                                                    andDeviceId:deviceId
-                                                       andData:@{@"sensorDetected": (NSNumber *)report.value}];
+                                                   andEndpoint:report.path.endpoint
+                                                       andData:@{@"sensorDetected":(NSNumber *)report.value}];
                 }
             }
         }
@@ -438,6 +475,7 @@
         NSLog(@"[subscribeWithQueue] Status: Failed with error %@", [error localizedDescription]);
         [TPDeviceChannelHelper sendReportErrorEventSink:strongSelf->eventSink
                                             andDeviceId:deviceId
+                                            andEndpoint:NULL
                                                andError:error
                                              andMessage:[error localizedDescription]];
     };
