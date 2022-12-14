@@ -59,7 +59,7 @@ class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _generalWidget(),
-                      _actionsWidget(),
+                      _bindingWidget(),
                       const SizedBox(height: 40),
                       _unpairWidget(),
                     ],
@@ -149,48 +149,82 @@ class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
     );
   }
 
-  Widget _actionsWidget() {
+  Widget _bindingWidget() {
+    List<TPDevice> endpoints = [
+      widget.device.value,
+      ...widget.device.value.subDevices.values
+          .where((element) => element.bindingClusterControllers.isNotEmpty)
+          .toList()
+        ..sort(((a, b) => a.endpoint.compareTo(b.endpoint))),
+    ];
+
     Widget bindingAction() {
-      return CupertinoButton(
-        onPressed: () {
-          Navigator.of(context).push(
-            CupertinoPageRoute(
-              builder: (_) => TPDeviceBindingSetting(
-                device: widget.device,
-              ),
-              settings:
-                  const RouteSettings(name: TPDeviceBindingSetting.routeName),
-            ),
-          );
-        },
-        padding: EdgeInsets.zero,
-        child: SizedBox(
-          key: const ValueKey('bindingActionWidget'),
-          height: 50,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Binding',
-                textAlign: TextAlign.left,
-                style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-                      color: Colors.black,
+      int itemCount = 0;
+      return Column(
+        children: [
+          ...endpoints.map(
+            (e) {
+              itemCount += 1;
+              return CupertinoButton(
+                key: ValueKey(e.endpoint.toString()),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    CupertinoPageRoute(
+                      builder: (_) => TPDeviceBindingSetting(
+                        rootDevice: widget.device,
+                        subDevice: e,
+                      ),
+                      settings: const RouteSettings(
+                          name: TPDeviceBindingSetting.routeName),
                     ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color: Colors.grey,
-              ),
-            ],
+                  );
+                },
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 50,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Enpoint ${e.endpoint}',
+                            textAlign: TextAlign.left,
+                            style: CupertinoTheme.of(context)
+                                .textTheme
+                                .textStyle
+                                .copyWith(
+                                  color: Colors.black,
+                                ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: Colors.grey,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Visibility(
+                      visible: itemCount < endpoints.length,
+                      child: Divider(
+                        height: 1,
+                        color: Colors.grey[300]!,
+                        endIndent: 8,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-        ),
+        ],
       );
     }
 
     return Visibility(
       visible: widget.device.value.isBindingSupported,
       child: Container(
-        key: const ValueKey('actionsWidget'),
+        key: const ValueKey('_bindingWidget'),
         alignment: Alignment.centerLeft,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -199,7 +233,7 @@ class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
             Padding(
               padding: const EdgeInsets.only(left: 16.0),
               child: Text(
-                'ACTIONS',
+                'BINDING',
                 style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
                       color: Colors.grey,
                       fontSize: 12,
@@ -220,6 +254,78 @@ class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
       ),
     );
   }
+
+  // Widget _actionsWidget() {
+  //   Widget bindingAction() {
+  //     return CupertinoButton(
+  //       onPressed: () {
+  //         Navigator.of(context).push(
+  //           CupertinoPageRoute(
+  //             builder: (_) => TPDeviceBindingSetting(
+  //               device: widget.device,
+  //             ),
+  //             settings:
+  //                 const RouteSettings(name: TPDeviceBindingSetting.routeName),
+  //           ),
+  //         );
+  //       },
+  //       padding: EdgeInsets.zero,
+  //       child: SizedBox(
+  //         key: const ValueKey('bindingActionWidget'),
+  //         height: 50,
+  //         child: Row(
+  //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //           children: [
+  //             Text(
+  //               'Binding',
+  //               textAlign: TextAlign.left,
+  //               style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+  //                     color: Colors.black,
+  //                   ),
+  //             ),
+  //             const Icon(
+  //               Icons.chevron_right,
+  //               color: Colors.grey,
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     );
+  //   }
+
+  //   return Visibility(
+  //     visible: widget.device.value.isBindingSupported,
+  //     child: Container(
+  //       key: const ValueKey('actionsWidget'),
+  //       alignment: Alignment.centerLeft,
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.stretch,
+  //         children: [
+  //           const SizedBox(height: 30),
+  //           Padding(
+  //             padding: const EdgeInsets.only(left: 16.0),
+  //             child: Text(
+  //               'ACTIONS',
+  //               style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+  //                     color: Colors.grey,
+  //                     fontSize: 12,
+  //                   ),
+  //             ),
+  //           ),
+  //           const SizedBox(height: 8),
+  //           Container(
+  //             padding: const EdgeInsets.only(left: 16.0, right: 8.0),
+  //             decoration: BoxDecoration(
+  //               color: Colors.white,
+  //               borderRadius: BorderRadius.circular(8.0),
+  //             ),
+  //             child: bindingAction(),
+  //           )
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _unpairWidget() {
     return CupertinoButton(

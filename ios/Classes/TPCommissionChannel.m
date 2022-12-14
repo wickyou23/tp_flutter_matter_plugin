@@ -406,7 +406,34 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
     __block NSError* anyError;
     __block NSMutableArray* subDevices = [NSMutableArray array];
     __weak typeof(self) weakSelf = self;
-    [metadata.allKeys enumerateObjectsUsingBlock:^(NSString*  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+    dispatch_queue_t deviceTypeQueue = dispatch_queue_create("com.csa.matter.commission.getDeviceType", DISPATCH_QUEUE_CONCURRENT);
+    NSMutableArray* tmpEndpoints = [NSMutableArray arrayWithArray:metadata.allKeys];
+    void (^handleFailed)(void) = ^{
+        typeof(self) strongSelf = weakSelf;
+        if (tmpEndpoints.count != 0) {
+            return;
+        }
+        
+        if (!tpDevice) {
+            [strongSelf sendCompletetedCommissionEventSink:@{
+                @"message": @"Status: Waiting for connection with the device",
+                @"data": [tpDevice convertToDict]
+            }];
+        }
+        else {
+            [strongSelf sendCommissionSuccessEventSink: @{@"message": @"Status: Waiting for connection with the device"}];
+        }
+    };
+    
+    NSArray* allEnpoints = [tmpEndpoints sortedArrayUsingComparator:^NSComparisonResult(NSString* _Nonnull obj1, NSString* _Nonnull obj2) {
+        if ([obj2 intValue] < [obj1 intValue]) {
+            return NSOrderedDescending;
+        }
+        
+        return NSOrderedSame;
+    }];
+    
+    [allEnpoints enumerateObjectsUsingBlock:^(NSString*  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         typeof(self) strongSelf = weakSelf;
         if (anyError != NULL) {
             [strongSelf sendCommissionSuccessEventSink: @{@"message": @"Status: Waiting for connection with the device"}];
@@ -416,21 +443,35 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
         
         if ([obj intValue] == 0) {
             NSLog(@"Skip endpoint 0");
+            [tmpEndpoints removeObject:obj];
+            handleFailed();
+            return;
+        }
+        
+        NSDictionary* clusters = metadata[obj][@"clusters"];
+        if (![clusters objectForKey:[@(MTRClusterIDTypeDescriptorID) stringValue]]) {
+            NSLog(@"No cluster descriptor for endpoint %@", obj);
+            [tmpEndpoints removeObject:obj];
+            handleFailed();
             return;
         }
         
         MTRBaseClusterDescriptor* descriptor = [[MTRBaseClusterDescriptor alloc] initWithDevice:device
                                                                                        endpoint:@([obj integerValue])
-                                                                                          queue:strongSelf->comissionQueue];
+                                                                                          queue:deviceTypeQueue];
         
         __block NSArray* bindingClusterIds = [NSArray array];
+        dispatch_semaphore_t sema = dispatch_semaphore_create(idx);
         [descriptor readAttributeClientListWithCompletion:^(NSArray * _Nullable value, NSError * _Nullable error) {
             bindingClusterIds = value;
+            dispatch_semaphore_signal(sema);
         }];
         
         [descriptor readAttributeDeviceTypeListWithCompletion:^(NSArray * _Nullable value, NSError * _Nullable error) {
+            dispatch_semaphore_wait(sema, DISPATCH_TIME_FOREVER);
             anyError = error;
             if (error != NULL) {
+                handleFailed();
                 return;
             }
             
@@ -440,7 +481,8 @@ NSString* const CompletetedCommissionKey = @"CompletetedCommissionKey";
             [deviceMetadata setValue:bindingClusterIds forKey:@"bindingClusterIds"];
             
             MTRDescriptorClusterDeviceTypeStruct* deviceTypeStruct = (MTRDescriptorClusterDeviceTypeStruct*)[value firstObject];
-            if (idx == metadata.count - 1) {
+            [tmpEndpoints removeObject:obj];
+            if (tmpEndpoints.count == 0) {
                 if (tpDevice == NULL) {
                     tpDevice = [[TPDevice alloc] initWithDeviceId:[@(lastId) stringValue]
                                                     andDeviceType:[deviceTypeStruct.type longLongValue]

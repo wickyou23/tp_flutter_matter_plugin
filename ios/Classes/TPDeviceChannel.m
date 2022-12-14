@@ -45,7 +45,7 @@
         [self getDiscoverDevice:result];
     }
     else if ([TPMethodGetDeviceList isEqualToString:call.method]) {
-        [self getDeviceList:result];
+        [self getDeviceListWithResult:result];
     }
     else if ([TPMethodUnpairDeviceById isEqualToString:call.method]) {
         NSDictionary* args = call.arguments;
@@ -94,8 +94,12 @@
     });
 }
 
-- (void)getDeviceList:(FlutterResult)result
+- (void)getDeviceListWithResult:(FlutterResult)result
 {
+    result([self getDeviceList]);
+}
+
+- (NSArray*)getDeviceList {
     uint64_t nextDeviceID = MTRGetNextAvailableDeviceID();
     NSMutableArray* deviceList = [NSMutableArray new];
     for (uint64_t i = 0; i < nextDeviceID; i++) {
@@ -104,7 +108,7 @@
         }
     }
     
-    result(deviceList);
+    return deviceList;
 }
 
 - (void)unpairDeviceById:(NSString*)deviceId andFlutterResult:(FlutterResult)result {
@@ -266,7 +270,15 @@
             
             BOOL found = NO;
             BOOL found112233 = NO;
-            for (MTRAccessControlClusterAccessControlEntry* item in value) {
+            NSMutableSet* deviceList = [NSMutableSet setWithArray:[strongSelf getDeviceList]];
+            [deviceList addObject:@(0xE6C4175A4E0A08B)];
+            [deviceList addObject:@(112233)];
+            NSPredicate* filterPredicate = [NSPredicate predicateWithBlock:^BOOL(id _Nullable evaluatedObject, NSDictionary<NSString *,id> * _Nullable bindings) {
+                return [deviceList containsObject:((MTRAccessControlClusterAccessControlEntry*)evaluatedObject).subjects.firstObject];
+            }];
+            
+            NSArray* filterValues = [value filteredArrayUsingPredicate:filterPredicate];
+            for (MTRAccessControlClusterAccessControlEntry* item in filterValues) {
                 if ([item.subjects containsObject:@([deviceId toUInt64])]) {
                     found = YES;
                 }
@@ -301,7 +313,7 @@
                 MTRBaseClusterAccessControl *accessControl = [[MTRBaseClusterAccessControl alloc] initWithDevice:chipDevice
                                                                                                         endpoint:trueEndpoint
                                                                                                            queue:strongSelf->deviceChannelQueue];
-                NSMutableArray* oldEntries = [NSMutableArray arrayWithArray:[value copy]];
+                NSMutableArray* oldEntries = [NSMutableArray arrayWithArray:[filterValues copy]];
                 [oldEntries addObjectsFromArray:newEntries];
                 [accessControl writeAttributeACLWithValue:oldEntries completion:^(NSError * _Nullable writeACLError) {
                     typeof(self) strongSelf = weakSelf;

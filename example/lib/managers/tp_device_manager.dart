@@ -134,7 +134,7 @@ class TPDeviceManager {
       }
 
       for (var clusterIdType in bindingDevice.bindingClusterControllers) {
-        if (!device.value.bindingClusterControllers.contains(clusterIdType)) {
+        if (!device.value.clusterControllers.contains(clusterIdType)) {
           continue;
         }
 
@@ -162,16 +162,30 @@ class TPDeviceManager {
           bindingDevices.map((e) => TPBindingDevice.fromJson(e)).toList(),
     );
 
+    TPDevice rootDevice;
+    if (!newDeviceInstance.isMainDevice) {
+      rootDevice = _mapDevices[newDeviceInstance.deviceId]!;
+      rootDevice.subDevices.update(
+        newDeviceInstance.endpoint,
+        (value) => newDeviceInstance,
+        ifAbsent: () => newDeviceInstance,
+      );
+
+      rootDevice = rootDevice.copyWith();
+    } else {
+      rootDevice = newDeviceInstance;
+    }
+
     _mapDevices.update(
-      device.deviceId,
-      (value) => newDeviceInstance,
-      ifAbsent: () => newDeviceInstance,
+      rootDevice.deviceId,
+      (value) => rootDevice,
+      ifAbsent: () => rootDevice,
     );
 
     await storage.saveDevices(_mapDevices);
 
     final deviceValue = _mapDeviceValues[device.deviceId];
-    deviceValue?.value = newDeviceInstance;
+    deviceValue?.value = rootDevice;
   }
 
   Future<void> syncBindingDevices(
@@ -180,16 +194,30 @@ class TPDeviceManager {
       bindingDevices: newBindingDevices,
     );
 
+    TPDevice rootDevice;
+    if (!newDeviceInstance.isMainDevice) {
+      rootDevice = _mapDevices[newDeviceInstance.deviceId]!;
+      rootDevice.subDevices.update(
+        newDeviceInstance.endpoint,
+        (value) => newDeviceInstance,
+        ifAbsent: () => newDeviceInstance,
+      );
+
+      rootDevice = rootDevice.copyWith();
+    } else {
+      rootDevice = newDeviceInstance;
+    }
+
     _mapDevices.update(
-      device.deviceId,
-      (value) => newDeviceInstance,
-      ifAbsent: () => newDeviceInstance,
+      rootDevice.deviceId,
+      (value) => rootDevice,
+      ifAbsent: () => rootDevice,
     );
 
     await storage.saveDevices(_mapDevices);
 
     final deviceValue = _mapDeviceValues[device.deviceId];
-    deviceValue?.value = newDeviceInstance;
+    deviceValue?.value = rootDevice;
   }
 
   Future<void> _onDeviceEvent(TPDeviceEvent? event) async {

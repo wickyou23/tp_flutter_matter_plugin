@@ -11,9 +11,14 @@ import 'package:tp_flutter_matter_package_example/managers/tp_device_manager.dar
 class TPDeviceBindingSetting extends StatefulWidget {
   static const routeName = '/TPDeviceBindingSetting';
 
-  const TPDeviceBindingSetting({super.key, required this.device});
+  const TPDeviceBindingSetting({
+    super.key,
+    required this.rootDevice,
+    required this.subDevice,
+  });
 
-  final ValueNotifier<TPDevice> device;
+  final ValueNotifier<TPDevice> rootDevice;
+  final TPDevice subDevice;
 
   @override
   State<TPDeviceBindingSetting> createState() => _TPDeviceBindingSettingState();
@@ -44,7 +49,7 @@ class _TPDeviceBindingSettingState extends State<TPDeviceBindingSetting> {
             delegate: TPCupertinoSliverNavigationBarNoLargerTitle(
               context,
               title: 'Binding',
-              previousPageTitle: widget.device.value.getDeviceName(),
+              previousPageTitle: widget.rootDevice.value.getDeviceName(),
               trailing: ValueListenableBuilder(
                 valueListenable: _deviceSeleted,
                 builder: (_, value, __) {
@@ -219,7 +224,7 @@ class _TPDeviceBindingSettingState extends State<TPDeviceBindingSetting> {
 
   Future<List<ValueNotifier<_TPBindingDeviceCell>>> _getBindingDevices() async {
     final List<ValueNotifier<_TPBindingDeviceCell>> filterDevices = [];
-    final currentDevice = widget.device.value;
+    final currentDevice = widget.subDevice;
 
     final currentBindingDatas =
         await TpFlutterMatterPlugin().readBindingDatasWithDevice(currentDevice);
@@ -282,7 +287,7 @@ class _TPDeviceBindingSettingState extends State<TPDeviceBindingSetting> {
   Future<void> _saveBinding() async {
     final plugin = TpFlutterMatterPlugin();
     final result = await plugin.saveBindingWithDevice(
-        widget.device.value, _deviceSeleted.value);
+        widget.subDevice, _deviceSeleted.value);
     if (!mounted) {
       return;
     }
@@ -303,8 +308,7 @@ class _TPDeviceBindingSettingState extends State<TPDeviceBindingSetting> {
     } else if (result is TPMatterResponseSuccess) {
       final data = result.data;
       if (data is List<Map>) {
-        TPDeviceManager()
-            .saveBindingDevicesWithDevice(widget.device.value, data);
+        TPDeviceManager().saveBindingDevicesWithDevice(widget.subDevice, data);
       }
 
       ScaffoldMessenger.of(context)
