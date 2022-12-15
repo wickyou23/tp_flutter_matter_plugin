@@ -32,13 +32,13 @@ class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
     return WillPopScope(
         child: CupertinoPageScaffold(
           backgroundColor: Colors.grey[100]!,
-          child: CustomScrollView(
-            slivers: [
-              ValueListenableBuilder(
-                key: const ValueKey('SliverPersistentHeader'),
-                valueListenable: widget.device,
-                builder: ((_, value, __) {
-                  return SliverPersistentHeader(
+          child: ValueListenableBuilder(
+            valueListenable: widget.device,
+            builder: ((_, value, __) {
+              return CustomScrollView(
+                slivers: [
+                  SliverPersistentHeader(
+                    key: const ValueKey('SliverPersistentHeader'),
                     delegate: TPCupertinoSliverNavigationBarNoLargerTitle(
                       context,
                       title: value.getDeviceName(),
@@ -46,27 +46,27 @@ class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
                     ),
                     pinned: true,
                     floating: false,
-                  );
-                }),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 30,
-                  horizontal: 16,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _generalWidget(),
-                      _bindingWidget(),
-                      const SizedBox(height: 40),
-                      _unpairWidget(),
-                    ],
                   ),
-                ),
-              )
-            ],
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 30,
+                      horizontal: 16,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _generalWidget(),
+                          _bindingWidget(),
+                          const SizedBox(height: 40),
+                          _unpairWidget(),
+                        ],
+                      ),
+                    ),
+                  )
+                ],
+              );
+            }),
           ),
         ),
         onWillPop: () async {
@@ -185,7 +185,6 @@ class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
                     SizedBox(
                       height: 50,
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
                             'Enpoint ${e.endpoint}',
@@ -196,6 +195,23 @@ class _TPDeviceSettingDetailsState extends State<TPDeviceSettingDetails> {
                                 .copyWith(
                                   color: Colors.black,
                                 ),
+                          ),
+                          Expanded(child: Container()),
+                          Visibility(
+                            visible: e.bindingDevices.isNotEmpty,
+                            child: Text(
+                              (e.bindingDevices.length == 1)
+                                  ? '${e.bindingDevices.length} device'
+                                  : '${e.bindingDevices.length} devices',
+                              textAlign: TextAlign.left,
+                              style: CupertinoTheme.of(context)
+                                  .textTheme
+                                  .textStyle
+                                  .copyWith(
+                                    color: Colors.grey,
+                                    fontSize: 14,
+                                  ),
+                            ),
                           ),
                           const Icon(
                             Icons.chevron_right,

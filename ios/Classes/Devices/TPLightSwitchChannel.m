@@ -61,7 +61,6 @@
             return;
         
         for (MTRAttributeReport* report in reports) {
-            NSLog(@"[THANGPHUNG][MTRAttributeReport] %@", report.path);
             if ([report.path.cluster isEqualToNumber:@(MTRClusterIDTypeOnOffID)] &&
                 [report.path.attribute isEqualToNumber:@(MTRAttributeIDTypeClusterOnOffAttributeOnOffID)]) {
                 if (report.error != nil) {

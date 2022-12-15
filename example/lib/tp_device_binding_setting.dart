@@ -7,6 +7,7 @@ import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package/tp_flutter_matter_package.dart';
 import 'package:tp_flutter_matter_package_example/custom_widgets/TPCupertinoSliverNavigationBarNoLargerTitle.dart';
 import 'package:tp_flutter_matter_package_example/managers/tp_device_manager.dart';
+import 'package:tp_flutter_matter_package_example/tp_extension.dart';
 
 class TPDeviceBindingSetting extends StatefulWidget {
   static const routeName = '/TPDeviceBindingSetting';
@@ -30,8 +31,11 @@ class _TPDeviceBindingSettingState extends State<TPDeviceBindingSetting> {
   final ValueNotifier<Map<TPDeviceClusterIDType, List<TPDevice>>>
       _deviceSeleted = ValueNotifier({});
 
+  late TPDevice _currentDevice;
+
   @override
   void initState() {
+    _currentDevice = widget.subDevice;
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
       _filterDevices.value = await _getBindingDevices();
     });
@@ -50,27 +54,15 @@ class _TPDeviceBindingSettingState extends State<TPDeviceBindingSetting> {
               context,
               title: 'Binding',
               previousPageTitle: widget.rootDevice.value.getDeviceName(),
-              trailing: ValueListenableBuilder(
-                valueListenable: _deviceSeleted,
-                builder: (_, value, __) {
-                  return Opacity(
-                    opacity: value.isEmpty ? 0.3 : 1.0,
-                    child: CupertinoButton(
-                      onPressed: value.isEmpty
-                          ? null
-                          : () async {
-                              await _saveBinding();
-                            },
-                      padding: EdgeInsets.zero,
-                      child: Text(
-                        'Save',
-                        style: CupertinoTheme.of(context)
-                            .textTheme
-                            .actionTextStyle,
-                      ),
-                    ),
-                  );
+              trailing: CupertinoButton(
+                onPressed: () async {
+                  await _saveBinding();
                 },
+                padding: EdgeInsets.zero,
+                child: Text(
+                  'Save',
+                  style: CupertinoTheme.of(context).textTheme.actionTextStyle,
+                ),
               ),
             ),
             pinned: true,
@@ -224,21 +216,32 @@ class _TPDeviceBindingSettingState extends State<TPDeviceBindingSetting> {
 
   Future<List<ValueNotifier<_TPBindingDeviceCell>>> _getBindingDevices() async {
     final List<ValueNotifier<_TPBindingDeviceCell>> filterDevices = [];
-    final currentDevice = widget.subDevice;
+    context.showiOSLoading();
+    final currentBindingDatas = await TpFlutterMatterPlugin()
+        .readBindingDatasWithDevice(_currentDevice);
+    if (currentBindingDatas is TPMatterResponseError) {
+      if (mounted) {
+        context.hideiOSLoading();
+        context.showSnackBar(
+          message: '[Error]: ${currentBindingDatas.errorMessage}',
+          textColor: Colors.redAccent,
+        );
+      }
 
-    final currentBindingDatas =
-        await TpFlutterMatterPlugin().readBindingDatasWithDevice(currentDevice);
+      return [];
+    }
+
     var currentBindingDevices = <TPBindingDevice>[];
     if (currentBindingDatas is TPMatterResponseSuccess<List<TPBindingDevice>>) {
       currentBindingDevices = currentBindingDatas.data ?? [];
     }
 
-    await TPDeviceManager()
-        .syncBindingDevices(currentDevice, currentBindingDevices);
+    _currentDevice = await TPDeviceManager()
+        .syncBindingDevices(_currentDevice, currentBindingDevices);
 
     final deviceGroup = await TPDeviceManager()
-        .getDevicesMappingWithBindingDevice(bindingDevice: currentDevice);
-    for (var clusterType in currentDevice.bindingClusterControllers) {
+        .getDevicesMappingWithBindingDevice(bindingDevice: _currentDevice);
+    for (var clusterType in _currentDevice.bindingClusterControllers) {
       if (!deviceGroup.containsKey(clusterType)) {
         continue;
       }
@@ -249,7 +252,7 @@ class _TPDeviceBindingSettingState extends State<TPDeviceBindingSetting> {
 
       final deivceList = deviceGroup[clusterType]!;
       for (var device in deivceList) {
-        final isSelected = currentDevice.bindingDevices.firstWhereOrNull(
+        final isSelected = _currentDevice.bindingDevices.firstWhereOrNull(
                 (element) =>
                     element.cluster == clusterType.value &&
                     element.deviceId.toString() == device.deviceId &&
@@ -281,48 +284,39 @@ class _TPDeviceBindingSettingState extends State<TPDeviceBindingSetting> {
       }
     }
 
+    if (mounted) {
+      context.hideiOSLoading();
+    }
+
     return filterDevices;
   }
 
   Future<void> _saveBinding() async {
     final plugin = TpFlutterMatterPlugin();
     final result = await plugin.saveBindingWithDevice(
-        widget.subDevice, _deviceSeleted.value);
+        _currentDevice, _deviceSeleted.value);
     if (!mounted) {
       return;
     }
 
     if (result is TPMatterResponseError) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              '[Error]: ${result.errorMessage}',
-              style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-                    color: Colors.redAccent,
-                  ),
-            ),
-          ),
-        );
+      context.showSnackBar(
+        message: '[Error]: ${result.errorMessage}',
+        textColor: Colors.redAccent,
+      );
     } else if (result is TPMatterResponseSuccess) {
       final data = result.data;
-      if (data is List<Map>) {
-        TPDeviceManager().saveBindingDevicesWithDevice(widget.subDevice, data);
+      if (data is List) {
+        TPDeviceManager().saveBindingDevicesWithDevice(
+          _currentDevice,
+          data.map((e) => e as Map).toList(),
+        );
       }
 
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              '[Success]: Saved!',
-              style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-                    color: Colors.greenAccent,
-                  ),
-            ),
-          ),
-        );
+      context.showSnackBar(
+        message: '[Success]: Saved!',
+        textColor: Colors.greenAccent,
+      );
     }
   }
 }

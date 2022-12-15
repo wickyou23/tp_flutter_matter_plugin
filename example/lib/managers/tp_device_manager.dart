@@ -188,7 +188,7 @@ class TPDeviceManager {
     deviceValue?.value = rootDevice;
   }
 
-  Future<void> syncBindingDevices(
+  Future<TPDevice> syncBindingDevices(
       TPDevice device, List<TPBindingDevice> newBindingDevices) async {
     final newDeviceInstance = device.copyWith(
       bindingDevices: newBindingDevices,
@@ -218,6 +218,7 @@ class TPDeviceManager {
 
     final deviceValue = _mapDeviceValues[device.deviceId];
     deviceValue?.value = rootDevice;
+    return newDeviceInstance;
   }
 
   Future<void> _onDeviceEvent(TPDeviceEvent? event) async {
