@@ -234,7 +234,7 @@ class _MyAppState extends State<MyApp> {
           child: ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(10)),
             child: Container(
-              color: device.isOn
+              color: device.isONForAllEnpoint
                   ? Colors.orange[100]!.withAlpha((0.6 * 255).toInt())
                   : Colors.white24,
               padding: const EdgeInsets.all(16),
@@ -402,7 +402,7 @@ class _MyAppState extends State<MyApp> {
           !deviceValue.isSupportedColorControl) {
         return null;
       }
-    } else {
+    } else if (deviceValue is TPLightSwitch) {
       Navigator.of(context).push(
         CupertinoPageRoute(
           builder: (_) {
@@ -427,10 +427,9 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  Future<void> _handleDoubleTap(ValueNotifier<TPDevice> device) async {
-    final deviceValue = device.value;
-    if (deviceValue is TPLightbulbDimmer) {
-      final response = await deviceValue.toggle();
+  Future<void> _handleDoubleTap(ValueNotifier<TPDevice> deviceValue) async {
+    final device = deviceValue.value;
+    await for (var response in device.toggleAll()) {
       if (response is TPDeviceControlError) {
         if (!mounted) {
           return;
@@ -443,25 +442,18 @@ class _MyAppState extends State<MyApp> {
               content: Text('[Error]: ${response.errorMessage}'),
             ),
           );
-      } else {
-        await TPDeviceManager().updateDevice(deviceValue);
-      }
-    } else if (deviceValue is TPLightbulb) {
-      final response = await deviceValue.toggle();
-      if (response is TPDeviceControlError) {
-        if (!mounted) {
-          return;
+      } else if (response is TPDeviceControlSuccess) {
+        TPDevice? updatedDevice;
+        if (response.endpoint == device.endpoint) {
+          updatedDevice = device;
+        } else {
+          updatedDevice = device.subDevices[response.endpoint];
         }
 
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text('[Error]: ${response.errorMessage}'),
-            ),
-          );
-      } else {
-        await TPDeviceManager().updateDevice(deviceValue);
+        if (updatedDevice != null &&
+            updatedDevice.deviceId == device.deviceId) {
+          await TPDeviceManager().updateDevice(updatedDevice);
+        }
       }
     }
   }

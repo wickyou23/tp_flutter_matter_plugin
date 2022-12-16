@@ -18,7 +18,9 @@ class TPDeviceControlError extends TPDeviceControlResponse {
 }
 
 class TPDeviceControlSuccess extends TPDeviceControlResponse {
-  TPDeviceControlSuccess(super.deviceId);
+  final int endpoint;
+
+  TPDeviceControlSuccess(super.deviceId, this.endpoint);
 }
 
 class TPDeviceControlHelper {
@@ -29,9 +31,10 @@ class TPDeviceControlHelper {
 
     if (response.containsKey(tpControlSuccessKey)) {
       Map successMap = response[tpControlSuccessKey] as Map;
-      String deviceId = (successMap['deviceId'] as String?) ?? '';
+      String deviceId = successMap['deviceId'] as String;
+      int endpoint = successMap['endpoint'] as int;
       if (deviceId.isNotEmpty) {
-        return TPDeviceControlSuccess(deviceId);
+        return TPDeviceControlSuccess(deviceId, endpoint);
       }
 
       return TPDeviceControlError.unknown();

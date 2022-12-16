@@ -20,7 +20,6 @@ NSString* const sendSuccessKey = @"sendSuccessKey";
 @implementation TPDeviceChannelHelper
 
 + (void)verifyClusterIdWithEndpoint:(NSNumber*)endpoint
-                    andSubEndpoints:(NSMutableArray*)subEndpoints
                        andClusterId:(NSNumber*)clusterId
                  andDeviceConnected:(MTRBaseDevice*)device
                            andQueue:(dispatch_queue_t)queue
@@ -45,14 +44,7 @@ NSString* const sendSuccessKey = @"sendSuccessKey";
                 return;
             }
             
-            NSNumber* nextEndpoint = @(0);
-            if (subEndpoints.count != 0) {
-                nextEndpoint = [subEndpoints lastObject];
-                [subEndpoints removeLastObject];
-            }
-            
-            [TPDeviceChannelHelper verifyClusterIdWithEndpoint:nextEndpoint
-                                               andSubEndpoints:subEndpoints
+            [TPDeviceChannelHelper verifyClusterIdWithEndpoint:@(0)
                                                   andClusterId:clusterId
                                             andDeviceConnected:device
                                                       andQueue:queue
@@ -66,6 +58,7 @@ NSString* const sendSuccessKey = @"sendSuccessKey";
 
 + (void)sendControlErrorResult:(FlutterResult)result
                    andDeviceId:(NSString*)deviceId
+                   andEndpoint:(NSNumber*)endpoint
                       andError:(NSError* _Nullable)error
                     andMessage:(NSString* _Nullable)message {
     if (result == NULL) {
@@ -80,17 +73,18 @@ NSString* const sendSuccessKey = @"sendSuccessKey";
         errorType = TPControlUnknowError;
     }
     
-    result(@{ControlErrorKey: @{@"deviceId": deviceId, @"errorType": @(errorType), @"errorMessage": message}});
+    result(@{ControlErrorKey: @{@"deviceId": deviceId, @"endpoint": endpoint, @"errorType": @(errorType), @"errorMessage": message}});
 }
 
 + (void)sendControlSuccessResult:(FlutterResult)result
                      andDeviceId:(NSString*)deviceId
+                     andEndpoint:(NSNumber*)endpoint
                          andData:(id _Nullable)data {
     if (result == NULL) {
         return;
     }
     
-    result(@{ControlSuccessKey: @{@"deviceId": deviceId, @"data": data}});
+    result(@{ControlSuccessKey: @{@"deviceId": deviceId, @"endpoint": endpoint, @"data": data}});
 }
 
 + (void)sendReportEventSink:(FlutterEventSink)eventSink

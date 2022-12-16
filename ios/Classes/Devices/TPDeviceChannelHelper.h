@@ -15,7 +15,6 @@ NS_ASSUME_NONNULL_BEGIN
 @interface TPDeviceChannelHelper : NSObject
 
 + (void)verifyClusterIdWithEndpoint:(NSNumber*)endpoint
-                    andSubEndpoints:(NSMutableArray*)subEndpoints
                        andClusterId:(NSNumber*)clusterId
                  andDeviceConnected:(MTRBaseDevice*)device
                            andQueue:(dispatch_queue_t)queue
@@ -24,10 +23,12 @@ NS_ASSUME_NONNULL_BEGIN
 //MARK: - EventSink
 + (void)sendControlErrorResult:(FlutterResult)result
                    andDeviceId:(NSString*)deviceId
+                   andEndpoint:(NSNumber*)endpoint
                       andError:(NSError* _Nullable)error
                     andMessage:(NSString* _Nullable)message;
 + (void)sendControlSuccessResult:(FlutterResult)result
                      andDeviceId:(NSString*)deviceId
+                     andEndpoint:(NSNumber*)endpoint
                          andData:(id _Nullable)data;
 + (void)sendReportEventSink:(FlutterEventSink)eventSink
                 andDeviceId:(NSString*)deviceId

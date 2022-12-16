@@ -47,10 +47,8 @@
         NSDictionary* args = (NSDictionary*)call.arguments;
         NSString* deviceId = args[@"deviceId"];
         NSNumber* endpoint = args[@"endpoint"];
-        NSArray* subEndpoints = args[@"subEndpoints"];
         [self turnOnOff:deviceId
             andEndpoint:endpoint
-        andSubEndpoints:subEndpoints
                andOnOff:YES
               andResult:result];
     }
@@ -58,10 +56,8 @@
         NSDictionary* args = (NSDictionary*)call.arguments;
         NSString* deviceId = args[@"deviceId"];
         NSNumber* endpoint = args[@"endpoint"];
-        NSArray* subEndpoints = args[@"subEndpoints"];
         [self turnOnOff:deviceId
             andEndpoint:endpoint
-        andSubEndpoints:subEndpoints
                andOnOff:NO
               andResult:result];
     }
@@ -75,10 +71,8 @@
         NSString* deviceId = args[@"deviceId"];
         NSNumber* level = args[@"level"];
         NSNumber* endpoint = args[@"endpoint"];
-        NSArray* subEndpoints = args[@"subEndpoints"];
         [self controlLevelWithDeviceId:deviceId
                            andEndpoint:endpoint
-                       andSubEndpoints:subEndpoints
                               andLevel:level
                              andResult: result];
     }
@@ -87,10 +81,8 @@
         NSString* deviceId = args[@"deviceId"];
         NSNumber* temperature = args[@"temperatureColor"];
         NSNumber* endpoint = args[@"endpoint"];
-        NSArray* subEndpoints = args[@"subEndpoints"];
         [self controlTemperatureColorWithDeviceId:deviceId
                                       andEndpoint:endpoint
-                                  andSubEndpoints:subEndpoints
                               andTemperatureColor:temperature
                                         andResult: result];
     }
@@ -100,10 +92,8 @@
         NSNumber* hue = args[@"hue"];
         NSNumber* saturation = args[@"saturation"];
         NSNumber* endpoint = args[@"endpoint"];
-        NSArray* subEndpoints = args[@"subEndpoints"];
         [self controlHueAndSaturationColorWithDeviceId:deviceId
                                            andEndpoint:endpoint
-                                       andSubEndpoints:subEndpoints
                                                 andHUE:hue
                                          andSaturation:saturation
                                              andResult:result];
@@ -115,7 +105,6 @@
 
 - (void)turnOnOff:(NSString*)deviceId
       andEndpoint:(NSNumber*)endpoint
-  andSubEndpoints:(NSArray*)subEndpoints
          andOnOff:(BOOL)onOff
         andResult:(FlutterResult)result {
     __weak typeof(self) weakSelf = self;
@@ -127,6 +116,7 @@
                     NSLog(@"[DeviceControl] Status: Control failed");
                     [TPDeviceChannelHelper sendControlErrorResult:result
                                                       andDeviceId:deviceId
+                                                      andEndpoint:trueEndpoint
                                                          andError:endpointError
                                                        andMessage:@"[DeviceControl] Status: Control failed"];
                     
@@ -143,12 +133,14 @@
                         if (error != NULL) {
                             [TPDeviceChannelHelper sendControlErrorResult:result
                                                               andDeviceId:deviceId
+                                                              andEndpoint:trueEndpoint
                                                                  andError:error
                                                                andMessage:[error localizedDescription]];
                         }
                         else {
                             [TPDeviceChannelHelper sendControlSuccessResult:result
                                                                 andDeviceId:deviceId
+                                                                andEndpoint:trueEndpoint
                                                                     andData:@(TRUE)];
                         }
                     }];
@@ -158,12 +150,14 @@
                         if (error != NULL) {
                             [TPDeviceChannelHelper sendControlErrorResult:result
                                                               andDeviceId:deviceId
+                                                              andEndpoint:trueEndpoint
                                                                  andError:error
                                                                andMessage:[error localizedDescription]];
                         }
                         else {
                             [TPDeviceChannelHelper sendControlSuccessResult:result
                                                                 andDeviceId:deviceId
+                                                                andEndpoint:trueEndpoint
                                                                     andData:@(TRUE)];
                         }
                     }];
@@ -172,7 +166,6 @@
             
             typeof(self) strongSelf = weakSelf;
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:endpoint
-                                               andSubEndpoints:[NSMutableArray arrayWithArray:subEndpoints]
                                                   andClusterId:@(MTRClusterIDTypeOnOffID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue
@@ -180,6 +173,7 @@
         } else {
             [TPDeviceChannelHelper sendControlErrorResult:result
                                               andDeviceId:deviceId
+                                              andEndpoint:endpoint
                                                  andError:error
                                                andMessage:@"Failed to establish a connection with the device"];
         }
@@ -188,6 +182,7 @@
     if (!isConnected) {
         [TPDeviceChannelHelper sendControlErrorResult:result
                                           andDeviceId:deviceId
+                                          andEndpoint:endpoint
                                              andError:NULL
                                            andMessage:@"Failed to establish a connection with the device"];
     }
@@ -195,7 +190,6 @@
 
 - (void)controlLevelWithDeviceId:(NSString*)deviceId
                      andEndpoint:(NSNumber*)endpoint
-                 andSubEndpoints:(NSArray*)subEndpoints
                         andLevel:(NSNumber*)level
                        andResult:(FlutterResult)result {
     __weak typeof(self) weakSelf = self;
@@ -207,6 +201,7 @@
                     NSLog(@"[DeviceControl] Status: Control failed");
                     [TPDeviceChannelHelper sendControlErrorResult:result
                                                       andDeviceId:deviceId
+                                                      andEndpoint:trueEndpoint
                                                          andError:endpointError
                                                        andMessage:@"[DeviceControl] Status: Control failed"];
                     return;
@@ -221,12 +216,14 @@
                     if (error != NULL) {
                         [TPDeviceChannelHelper sendControlErrorResult:result
                                                           andDeviceId:deviceId
+                                                          andEndpoint:trueEndpoint
                                                              andError:error
                                                            andMessage:[error localizedDescription]];
                     }
                     else {
                         [TPDeviceChannelHelper sendControlSuccessResult:result
                                                             andDeviceId:deviceId
+                                                            andEndpoint:trueEndpoint
                                                                 andData:@(TRUE)];
                     }
                 }];
@@ -234,7 +231,6 @@
             
             typeof(self) strongSelf = weakSelf;
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:endpoint
-                                               andSubEndpoints:[NSMutableArray arrayWithArray:subEndpoints]
                                                   andClusterId:@(MTRClusterIDTypeLevelControlID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue
@@ -242,6 +238,7 @@
         } else {
             [TPDeviceChannelHelper sendControlErrorResult:result
                                               andDeviceId:deviceId
+                                              andEndpoint:endpoint
                                                  andError:error
                                                andMessage:@"Failed to establish a connection with the device"];
         }
@@ -250,6 +247,7 @@
     if (!isConnected) {
         [TPDeviceChannelHelper sendControlErrorResult:result
                                           andDeviceId:deviceId
+                                          andEndpoint:endpoint
                                              andError:NULL
                                            andMessage:@"Device is not connected"];
     }
@@ -257,7 +255,6 @@
 
 - (void)controlTemperatureColorWithDeviceId:(NSString*)deviceId
                                 andEndpoint:(NSNumber*)endpoint
-                            andSubEndpoints:(NSArray*)subEndpoints
                         andTemperatureColor:(NSNumber*)temperature
                                   andResult:(FlutterResult)result {
     __weak typeof(self) weakSelf = self;
@@ -269,6 +266,7 @@
                     NSLog(@"[DeviceControl] Status: Control failed");
                     [TPDeviceChannelHelper sendControlErrorResult:result
                                                       andDeviceId:deviceId
+                                                      andEndpoint:trueEndpoint
                                                          andError:endpointError
                                                        andMessage:@"[DeviceControl] Status: Control failed"];
                     return;
@@ -283,12 +281,14 @@
                     if (error != NULL) {
                         [TPDeviceChannelHelper sendControlErrorResult:result
                                                           andDeviceId:deviceId
+                                                          andEndpoint:trueEndpoint
                                                              andError:error
                                                            andMessage:[error localizedDescription]];
                     }
                     else {
                         [TPDeviceChannelHelper sendControlSuccessResult:result
                                                             andDeviceId:deviceId
+                                                            andEndpoint:trueEndpoint
                                                                 andData:@(TRUE)];
                     }
                 }];
@@ -296,7 +296,6 @@
             
             typeof(self) strongSelf = weakSelf;
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:endpoint
-                                               andSubEndpoints:[NSMutableArray arrayWithArray:subEndpoints]
                                                   andClusterId:@(MTRClusterIDTypeColorControlID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue
@@ -304,6 +303,7 @@
         } else {
             [TPDeviceChannelHelper sendControlErrorResult:result
                                               andDeviceId:deviceId
+                                              andEndpoint:endpoint
                                                  andError:error
                                                andMessage:@"Failed to establish a connection with the device"];
         }
@@ -312,6 +312,7 @@
     if (!isConnected) {
         [TPDeviceChannelHelper sendControlErrorResult:result
                                           andDeviceId:deviceId
+                                          andEndpoint:endpoint
                                              andError:NULL
                                            andMessage:@"Device is not connected"];
     }
@@ -319,7 +320,6 @@
 
 - (void)controlHueAndSaturationColorWithDeviceId:(NSString*)deviceId
                                      andEndpoint:(NSNumber*)endpoint
-                                 andSubEndpoints:(NSArray*)subEndpoints
                                           andHUE:(NSNumber*)hue
                                    andSaturation:(NSNumber*)saturation
                                        andResult:(FlutterResult)result {
@@ -332,6 +332,7 @@
                     NSLog(@"[DeviceControl] Status: Control failed");
                     [TPDeviceChannelHelper sendControlErrorResult:result
                                                       andDeviceId:deviceId
+                                                      andEndpoint:trueEndpoint
                                                          andError:endpointError
                                                        andMessage:@"[DeviceControl] Status: Control failed"];
                     return;
@@ -347,12 +348,14 @@
                     if (error != NULL) {
                         [TPDeviceChannelHelper sendControlErrorResult:result
                                                           andDeviceId:deviceId
+                                                          andEndpoint:trueEndpoint
                                                              andError:error
                                                            andMessage:[error localizedDescription]];
                     }
                     else {
                         [TPDeviceChannelHelper sendControlSuccessResult:result
                                                             andDeviceId:deviceId
+                                                            andEndpoint:trueEndpoint
                                                                 andData:@(TRUE)];
                     }
                 }];
@@ -360,7 +363,6 @@
             
             typeof(self) strongSelf = weakSelf;
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:endpoint
-                                               andSubEndpoints:[NSMutableArray arrayWithArray:subEndpoints]
                                                   andClusterId:@(MTRClusterIDTypeColorControlID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue
@@ -368,6 +370,7 @@
         } else {
             [TPDeviceChannelHelper sendControlErrorResult:result
                                               andDeviceId:deviceId
+                                              andEndpoint:endpoint
                                                  andError:error
                                                andMessage:@"Failed to establish a connection with the device"];
         }
@@ -376,6 +379,7 @@
     if (!isConnected) {
         [TPDeviceChannelHelper sendControlErrorResult:result
                                           andDeviceId:deviceId
+                                          andEndpoint:endpoint
                                              andError:NULL
                                            andMessage:@"Device is not connected"];
     }

@@ -31,6 +31,7 @@ class TPLightbulb extends TPDevice {
       : sensorDetected = json['sensorDetected'] as bool? ?? false,
         super.fromJson();
 
+  @override
   Future<TPDeviceControlResponse> turnON() async {
     final response = await TPLightbulbDevicePlatform.instance.turnON(this);
     if (response is TPDeviceControlSuccess) {
@@ -41,6 +42,7 @@ class TPLightbulb extends TPDevice {
     return response;
   }
 
+  @override
   Future<TPDeviceControlResponse> turnOFF() async {
     final response = await TPLightbulbDevicePlatform.instance.turnOFF(this);
     if (response is TPDeviceControlSuccess) {
@@ -49,14 +51,6 @@ class TPLightbulb extends TPDevice {
     }
 
     return response;
-  }
-
-  Future<TPDeviceControlResponse> toggle() async {
-    if (isOn) {
-      return await turnOFF();
-    } else {
-      return await turnON();
-    }
   }
 
   @override

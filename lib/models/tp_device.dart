@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
+import 'package:tp_flutter_matter_package/channels/devices/tp_device_control_manager.dart';
 import 'package:tp_flutter_matter_package/channels/tp_matter_device_method_interface.dart';
 import 'package:tp_flutter_matter_package/models/tp_binding_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb.dart';
@@ -288,10 +289,21 @@ class TPDevice {
     TPDeviceClusterIDType.kTPDeviceClusterIDTypeOnOffID
   };
 
-  bool get isBindingSupported =>
-      clusterActions
-          .contains(TPDeviceClusterIDType.kTPDeviceClusterIDTypeBindingID) &&
-      bindingClusterControllers.isNotEmpty;
+  bool get isBindingSupported {
+    bool isSupport = clusterActions
+            .contains(TPDeviceClusterIDType.kTPDeviceClusterIDTypeBindingID) &&
+        bindingClusterControllers.isNotEmpty;
+    if (!isSupport) {
+      for (var subDevice in subDevices.values) {
+        isSupport = isSupport ||
+            (subDevice.clusterActions.contains(
+                    TPDeviceClusterIDType.kTPDeviceClusterIDTypeBindingID) &&
+                subDevice.bindingClusterControllers.isNotEmpty);
+      }
+    }
+
+    return isSupport;
+  }
 
   TPDeviceErrorType? deviceError;
   bool get isError => deviceError != null;
@@ -300,6 +312,14 @@ class TPDevice {
       subDevices.values.map((e) => e.endpoint).toList();
 
   bool get isMainDevice => subDeviceId == null;
+  bool get isONForAllEnpoint {
+    bool tmpIsOn = isOn;
+    for (var element in subDevices.values) {
+      tmpIsOn = tmpIsOn || element.isOn;
+    }
+
+    return tmpIsOn;
+  }
 
   bool checkClusterIdExisted(TPDeviceClusterIDType clusterId) {
     final clusterIds = metadata["clusters"] as Map? ?? {};
@@ -310,6 +330,66 @@ class TPDevice {
 
   Future<bool> subscribeDevice() {
     throw UnimplementedError('subscribeDevice() method has not implement');
+  }
+
+  Future<TPDeviceControlResponse> turnON() async {
+    throw UnimplementedError('turnON() method has not implement');
+  }
+
+  Future<TPDeviceControlResponse> turnOFF() async {
+    throw UnimplementedError('turnOFF() method has not implement');
+  }
+
+  Future<TPDeviceControlResponse> toggle() async {
+    if (isOn) {
+      return await turnOFF();
+    } else {
+      return await turnON();
+    }
+  }
+
+  Stream<TPDeviceControlResponse> turnONSubDevices() async* {
+    for (var element in subDevices.values) {
+      if (element.runtimeType == TPDevice) {
+        continue;
+      }
+
+      if (!element.clusterControllers
+          .contains(TPDeviceClusterIDType.kTPDeviceClusterIDTypeOnOffID)) {
+        continue;
+      }
+
+      yield await element.turnON();
+    }
+  }
+
+  Stream<TPDeviceControlResponse> turnOFFSubDevices() async* {
+    for (var element in subDevices.values) {
+      if (element.runtimeType == TPDevice) {
+        continue;
+      }
+
+      if (!element.clusterControllers
+          .contains(TPDeviceClusterIDType.kTPDeviceClusterIDTypeOnOffID)) {
+        continue;
+      }
+
+      yield await element.turnOFF();
+    }
+  }
+
+  Stream<TPDeviceControlResponse> toggleAll() async* {
+    if (runtimeType == TPDevice) {
+      return;
+    }
+
+    if (isONForAllEnpoint) {
+      yield await turnOFF();
+      yield* turnOFFSubDevices();
+    } else {
+      yield await turnON();
+      yield* turnONSubDevices();
+    }
   }
 
   Future<bool> unpairDevice() async {
@@ -335,7 +415,7 @@ class TPDevice {
       }
 
       if (actions.isEmpty && controllers.isEmpty) {
-        return;
+        break;
       }
     }
 

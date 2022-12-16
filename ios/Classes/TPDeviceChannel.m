@@ -187,7 +187,6 @@
         
         if (chipDevice != NULL) {
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:endpoint
-                                               andSubEndpoints:[NSMutableArray array]
                                                   andClusterId:@(MTRClusterIDTypeBindingID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue
@@ -357,7 +356,6 @@
         
         if (chipDevice != NULL) {
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:bindingDeviceEndpoint
-                                               andSubEndpoints:[NSMutableArray array]
                                                   andClusterId:@(MTRClusterIDTypeAccessControlID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue
@@ -430,7 +428,6 @@
         
         if (chipDevice != NULL) {
             [TPDeviceChannelHelper verifyClusterIdWithEndpoint:endpoint
-                                               andSubEndpoints:[NSMutableArray array]
                                                   andClusterId:@(MTRClusterIDTypeBindingID)
                                             andDeviceConnected:chipDevice
                                                       andQueue:strongSelf->deviceChannelQueue

@@ -29,6 +29,7 @@ class TPDeviceManager {
 
   final Map<String, TPDevice> _mapDevices = {};
   final Map<String, ValueNotifier<TPDevice>> _mapDeviceValues = {};
+  final Map<String, ValueNotifier<TPDevice>> _mapSubDevicesValue = {};
 
   final _deviceChanged = StreamController<void>.broadcast();
   Stream<void> get deviceListChangedStream => _deviceChanged.stream;
@@ -53,27 +54,62 @@ class TPDeviceManager {
       ifAbsent: () => device,
     );
 
+    _mapSubDevicesValue.addEntries(
+      device.subDevices.values.map(
+        (e) => MapEntry(e.subDeviceId!, ValueNotifier<TPDevice>(e)),
+      ),
+    );
+
     await storage.saveDevices(_mapDevices);
   }
 
   Future<void> updateDevice(TPDevice device, {bool needToNotify = true}) async {
-    _mapDevices.update(
-      device.deviceId,
-      (value) => device,
-      ifAbsent: () => device,
-    );
+    TPDevice realDevice = device;
+    ValueNotifier<TPDevice>? subDeviceValue;
+    if (!realDevice.isMainDevice) {
+      realDevice = _mapDevices[realDevice.deviceId]!;
+      realDevice.subDevices.update(
+        device.endpoint,
+        (value) => device,
+        ifAbsent: () => device,
+      );
 
-    await storage.saveDevices(_mapDevices);
+      subDeviceValue = _mapSubDevicesValue[device.subDeviceId];
+    }
 
     final deviceValue = _mapDeviceValues[device.deviceId];
     if (needToNotify) {
-      final newDeviceInstance = device.copyWith()
-        ..deviceError = device.deviceError;
-      deviceValue?.value = newDeviceInstance;
+      realDevice = realDevice.copyWith()..deviceError = device.deviceError;
+      deviceValue?.value = realDevice;
+
+      if (subDeviceValue != null) {
+        final newSubDeviceInstance = device.copyWith()
+          ..deviceError = device.deviceError;
+        subDeviceValue.value = newSubDeviceInstance;
+      }
     }
+
+    _mapDevices.update(
+      realDevice.deviceId,
+      (value) => realDevice,
+      ifAbsent: () => realDevice,
+    );
+
+    await storage.saveDevices(_mapDevices);
   }
 
   Future<void> removeDevice(String deviceId) async {
+    final subDeviceIds = _mapDevices[deviceId]
+            ?.subDevices
+            .values
+            .map((e) => e.subDeviceId)
+            .toSet() ??
+        {};
+    if (subDeviceIds.isNotEmpty) {
+      _mapSubDevicesValue
+          .removeWhere((key, value) => subDeviceIds.contains(key));
+    }
+
     _mapDevices.remove(deviceId);
     _mapDeviceValues.remove(deviceId);
     _devices.removeWhere((element) => element.value.deviceId == deviceId);
@@ -113,6 +149,12 @@ class TPDeviceManager {
         key,
         (_) => ValueNotifier<TPDevice>(device),
         ifAbsent: () => ValueNotifier<TPDevice>(device),
+      );
+
+      _mapSubDevicesValue.addEntries(
+        device.subDevices.values.map(
+          (e) => MapEntry(e.subDeviceId!, ValueNotifier<TPDevice>(e)),
+        ),
       );
     });
 
@@ -221,6 +263,10 @@ class TPDeviceManager {
     return newDeviceInstance;
   }
 
+  ValueNotifier<TPDevice>? getSubDeviceValue(String subDeviceId) {
+    return _mapSubDevicesValue[subDeviceId];
+  }
+
   Future<void> _onDeviceEvent(TPDeviceEvent? event) async {
     if (event == null) return;
 
@@ -292,6 +338,11 @@ class TPDeviceManager {
 extension TPDeviceExt on TPDevice {
   String getDeviceName() {
     if (deviceName.isEmpty) {
+      if (!isMainDevice) {
+        final parentDevice = TPDeviceManager()._mapDevices[deviceId];
+        return parentDevice!.getDeviceName();
+      }
+
       return 'Device $deviceId';
     }
 
@@ -302,13 +353,23 @@ extension TPDeviceExt on TPDevice {
     final device = this;
     if (device is TPLightbulbDimmer) {
       return AssetImage(
-          'resources/images/lightbulb_led_wide_${device.isOn ? 'on' : 'off'}.png');
+          'resources/images/lightbulb_led_wide_${device.isONForAllEnpoint ? 'on' : 'off'}.png');
     } else if (device is TPLightbulb) {
       return AssetImage(
-          'resources/images/lightbulb_${device.isOn ? 'on' : 'off'}.png');
+          'resources/images/lightbulb_${device.isONForAllEnpoint ? 'on' : 'off'}.png');
     } else if (device is TPLightSwitch) {
       return AssetImage(
-          'resources/images/lightswitch_${device.isOn ? 'on' : 'off'}.png');
+          'resources/images/lightswitch_${device.isONForAllEnpoint ? 'on' : 'off'}.png');
+    } else {
+      return const AssetImage('resources/images/unknown_device.png');
+    }
+  }
+
+  AssetImage getControllerIcon() {
+    final device = this;
+    if (device is TPLightbulb || device is TPLightSwitch) {
+      return AssetImage(
+          'resources/images/control_power_${device.isOn ? 'on' : 'off'}.png');
     } else {
       return const AssetImage('resources/images/unknown_device.png');
     }
@@ -317,11 +378,11 @@ extension TPDeviceExt on TPDevice {
   String getStatusText() {
     final device = this;
     if (device is TPLightbulbDimmer) {
-      return device.isOn ? 'On' : 'Off';
+      return device.isONForAllEnpoint ? 'On' : 'Off';
     } else if (device is TPLightbulb) {
-      return device.isOn ? 'On' : 'Off';
+      return device.isONForAllEnpoint ? 'On' : 'Off';
     } else if (device is TPLightSwitch) {
-      return device.isOn ? 'On' : 'Off';
+      return device.isONForAllEnpoint ? 'On' : 'Off';
     } else {
       return '';
     }

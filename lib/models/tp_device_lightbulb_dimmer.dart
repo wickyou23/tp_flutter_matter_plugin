@@ -61,6 +61,7 @@ class TPLightbulbDimmer extends TPDevice {
     return super.toJson()..addAll({'level': level});
   }
 
+  @override
   Future<TPDeviceControlResponse> turnON() async {
     final response =
         await TpLightbulbDimmerDevicePlatform.instance.turnON(this);
@@ -72,6 +73,7 @@ class TPLightbulbDimmer extends TPDevice {
     return response;
   }
 
+  @override
   Future<TPDeviceControlResponse> turnOFF() async {
     final response =
         await TpLightbulbDimmerDevicePlatform.instance.turnOFF(this);
@@ -119,14 +121,6 @@ class TPLightbulbDimmer extends TPDevice {
     }
 
     return response;
-  }
-
-  Future<TPDeviceControlResponse> toggle() async {
-    if (isOn) {
-      return await turnOFF();
-    } else {
-      return await turnON();
-    }
   }
 
   @override
