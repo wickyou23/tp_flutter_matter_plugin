@@ -8,6 +8,7 @@ import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb_dimmer.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightswitch.dart';
+import 'package:tp_flutter_matter_package/models/tp_device_thermostat.dart';
 import 'package:tp_flutter_matter_package_example/datas/tp_storage_data.dart';
 
 class TPDeviceManager {
@@ -275,7 +276,7 @@ class TPDeviceManager {
     if (deviceValue == null) return;
 
     TPDevice? device = deviceValue.value;
-    if (event.endpoint != device.endpoint) {
+    if (event.endpoint != null && event.endpoint != device.endpoint) {
       device = device.subDevices[event.endpoint];
     }
 
@@ -295,6 +296,19 @@ class TPDeviceManager {
       newDeviceInstance = device.copyWith(
         isOn: event.isOn,
         sensorDetected: event.sensorDetected,
+      )..deviceError = null;
+    } else if (event is TPThermostatEventSuccess && device is TPThermostat) {
+      newDeviceInstance = device.copyWith(
+        absMinCool: event.absMinCool,
+        absMaxCool: event.absMaxCool,
+        absMinHeat: event.absMinHeat,
+        absMaxHeat: event.absMaxHeat,
+        minCool: event.minCool,
+        maxCool: event.maxCool,
+        minHeat: event.minHeat,
+        maxHeat: event.maxHeat,
+        localTempurature: event.localTemperature,
+        systemMode: event.systemMode,
       )..deviceError = null;
     } else if (event is TPDeviceEventError) {
       _handleDeviceError(deviceValue, event.errorType);
@@ -321,13 +335,8 @@ class TPDeviceManager {
   Future<void> _handleDeviceError(
       ValueNotifier<TPDevice> deviceValue, TPDeviceErrorType error) async {
     final device = deviceValue.value;
-    if (device is TPLightbulbDimmer) {
-      final newValue = device.copyWith()..deviceError = error;
-      deviceValue.value = newValue;
-    } else if (device is TPLightbulb) {
-      final newValue = device.copyWith()..deviceError = error;
-      deviceValue.value = newValue;
-    }
+    final newValue = device.copyWith()..deviceError = error;
+    deviceValue.value = newValue;
   }
 
   void cancel() {
@@ -350,18 +359,21 @@ extension TPDeviceExt on TPDevice {
   }
 
   AssetImage getIcon() {
-    final device = this;
-    if (device is TPLightbulbDimmer) {
-      return AssetImage(
-          'resources/images/lightbulb_led_wide_${device.isONForAllEnpoint ? 'on' : 'off'}.png');
-    } else if (device is TPLightbulb) {
-      return AssetImage(
-          'resources/images/lightbulb_${device.isONForAllEnpoint ? 'on' : 'off'}.png');
-    } else if (device is TPLightSwitch) {
-      return AssetImage(
-          'resources/images/lightswitch_${device.isONForAllEnpoint ? 'on' : 'off'}.png');
-    } else {
-      return const AssetImage('resources/images/unknown_device.png');
+    switch (deviceType) {
+      case TPDeviceType.kLightbulbDimmer:
+        return AssetImage(
+            'resources/images/lightbulb_led_wide_${isONForAllEnpoint ? 'on' : 'off'}.png');
+      case TPDeviceType.kLightbulb:
+        return AssetImage(
+            'resources/images/lightbulb_${isONForAllEnpoint ? 'on' : 'off'}.png');
+      case TPDeviceType.kSwitch:
+        return AssetImage(
+            'resources/images/lightswitch_${isONForAllEnpoint ? 'on' : 'off'}.png');
+      case TPDeviceType.kThermostat:
+        return AssetImage(
+            'resources/images/air_conditioner_${isONForAllEnpoint ? 'on' : 'off'}.png');
+      default:
+        return const AssetImage('resources/images/unknown_device.png');
     }
   }
 
@@ -376,15 +388,17 @@ extension TPDeviceExt on TPDevice {
   }
 
   String getStatusText() {
-    final device = this;
-    if (device is TPLightbulbDimmer) {
-      return device.isONForAllEnpoint ? 'On' : 'Off';
-    } else if (device is TPLightbulb) {
-      return device.isONForAllEnpoint ? 'On' : 'Off';
-    } else if (device is TPLightSwitch) {
-      return device.isONForAllEnpoint ? 'On' : 'Off';
-    } else {
-      return '';
+    switch (deviceType) {
+      case TPDeviceType.kLightbulbDimmer:
+        return isONForAllEnpoint ? 'On' : 'Off';
+      case TPDeviceType.kLightbulb:
+        return isONForAllEnpoint ? 'On' : 'Off';
+      case TPDeviceType.kSwitch:
+        return isONForAllEnpoint ? 'On' : 'Off';
+      case TPDeviceType.kThermostat:
+        return isONForAllEnpoint ? 'On' : 'Off';
+      default:
+        return '';
     }
   }
 
@@ -408,6 +422,8 @@ extension TPDeviceTypeExt on TPDeviceType {
         return 'Lightbulb Dimmer';
       case TPDeviceType.kSwitch:
         return 'Switch';
+      case TPDeviceType.kThermostat:
+        return 'Thermostat';
       default:
         return 'Undefine';
     }

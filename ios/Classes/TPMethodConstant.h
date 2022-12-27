@@ -28,4 +28,13 @@ extern NSString* const TPMethodSubscribeName;
 extern NSString* const TPMethodControlTemperatureColorName;
 extern NSString* const TPMethodcontrolHUEAndSaturationColorName;
 
+//Thermostat
+extern NSString* const TPMethodControlSystemModeName;
+extern NSString* const TPMethodControlMinCoolName;
+extern NSString* const TPMethodControlMaxCoolName;
+extern NSString* const TPMethodControlMinHeatName;
+extern NSString* const TPMethodControlMaxHeatName;
+extern NSString* const TPMethodControlOccupiedCoolingName;
+extern NSString* const TPMethodControlOccupiedHeatingName;
+
 NS_ASSUME_NONNULL_END

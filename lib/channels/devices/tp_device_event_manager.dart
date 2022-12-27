@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
+import 'package:tp_flutter_matter_package/models/tp_device_thermostat.dart';
 
 abstract class TPDeviceEvent {
   final String deviceId;
@@ -50,6 +51,40 @@ class TPLightbudEventSuccess extends TPDeviceEvent {
     super.endpoint, {
     this.isOn,
     this.sensorDetected,
+  });
+}
+
+//TPThermostatEventSuccess
+
+class TPThermostatEventSuccess extends TPDeviceEvent {
+  final double? localTemperature;
+  final double? absMaxCool;
+  final double? absMaxHeat;
+  final double? absMinHeat;
+  final double? absMinCool;
+  final double? maxCool;
+  final double? minCool;
+  final double? maxHeat;
+  final double? minHeat;
+  final double? occupiedCooling;
+  final double? occupiedHeating;
+  final TPThermostatMode? systemMode;
+
+  TPThermostatEventSuccess(
+    super.deviceId,
+    super.endpoint, {
+    this.localTemperature,
+    this.absMaxCool,
+    this.absMaxHeat,
+    this.absMinCool,
+    this.absMinHeat,
+    this.maxCool,
+    this.minCool,
+    this.maxHeat,
+    this.minHeat,
+    this.systemMode,
+    this.occupiedCooling,
+    this.occupiedHeating,
   });
 }
 

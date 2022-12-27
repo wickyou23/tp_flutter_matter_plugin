@@ -18,3 +18,5 @@ NSString* const TPLightbulbEventChannelDomain = @"tp.flutter.matter.event.lightb
 NSString* const TPLightbulbChannelDomain = @"tp.flutter.matter.device.lightbulbChannel";
 NSString* const TPLightSwitchEventChannelDomain = @"tp.flutter.matter.event.lightSwitchChannel";
 NSString* const TPLightSwitchChannelDomain = @"tp.flutter.matter.device.lightSwitchChannel";
+NSString* const TPThermostatEventChannelDomain = @"tp.flutter.matter.event.thermostatChannel";
+NSString* const TPThermostatChannelDomain = @"tp.flutter.matter.device.thermostatChannel";

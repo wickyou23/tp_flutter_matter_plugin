@@ -7,6 +7,7 @@ import 'package:tp_flutter_matter_package/models/tp_binding_device.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightbulb_dimmer.dart';
 import 'package:tp_flutter_matter_package/models/tp_device_lightswitch.dart';
+import 'package:tp_flutter_matter_package/models/tp_device_thermostat.dart';
 
 enum TPDeviceType {
   kLightbulb(0x0100),
@@ -25,41 +26,13 @@ enum TPDeviceType {
   kGenericSwitch(0x000f),
   kUnknown(0xffff);
 
-  factory TPDeviceType.fromValue(int value) {
-    switch (value) {
-      case 0x0100:
-        return TPDeviceType.kLightbulb;
-      case 0x0101:
-        return TPDeviceType.kLightbulbDimmer;
-      case 0x0103:
-        return TPDeviceType.kSwitch;
-      case 0x0015:
-        return TPDeviceType.kContactSensor;
-      case 0x000A:
-        return TPDeviceType.kDoorLock;
-      case 0x0106:
-        return TPDeviceType.kLightSensor;
-      case 0x0107:
-        return TPDeviceType.kOccupancySensor;
-      case 0x010A:
-        return TPDeviceType.kOutlet;
-      case 0x010C:
-        return TPDeviceType.kColorBulb;
-      case 0x0202:
-        return TPDeviceType.kWindowCovering;
-      case 0x0301:
-        return TPDeviceType.kThermostat;
-      case 0x0302:
-        return TPDeviceType.kTemperatureSensor;
-      case 0x0306:
-        return TPDeviceType.kFlowSensor;
-      default:
-        return TPDeviceType.kUnknown;
-    }
-  }
-
   const TPDeviceType(this.value);
   final int value;
+
+  static TPDeviceType fromValue(int value) {
+    return values.firstWhereOrNull((e) => e.value == value) ??
+        TPDeviceType.kUnknown;
+  }
 }
 
 enum TPDeviceClusterIDType {
@@ -151,25 +124,13 @@ enum TPDeviceErrorType {
   kTPDeviceDisconnectedError(0x00000005),
   kTPDeviceUnknowError(0xffffffff);
 
-  factory TPDeviceErrorType.fromValue(int value) {
-    switch (value) {
-      case 0x00000001:
-        return TPDeviceErrorType.kTPSubscribeTimeoutError;
-      case 0x00000002:
-        return TPDeviceErrorType.kTPReportEventError;
-      case 0x00000003:
-        return TPDeviceErrorType.kTPControlTimeoutError;
-      case 0x00000004:
-        return TPDeviceErrorType.kTPControlUnknowError;
-      case 0x00000005:
-        return TPDeviceErrorType.kTPDeviceDisconnectedError;
-      default:
-        return TPDeviceErrorType.kTPDeviceUnknowError;
-    }
-  }
-
   const TPDeviceErrorType(this.value);
   final int value;
+
+  static TPDeviceErrorType fromValue(int value) {
+    return values.firstWhereOrNull((e) => e.value == value) ??
+        TPDeviceErrorType.kTPDeviceUnknowError;
+  }
 }
 
 class TPDevice {
@@ -219,6 +180,8 @@ class TPDevice {
         return TPLightbulb.fromJson(json);
       case TPDeviceType.kSwitch:
         return TPLightSwitch.fromJson(json);
+      case TPDeviceType.kThermostat:
+        return TPThermostat.fromJson(json);
       default:
         return TPDevice.fromJson(json);
     }

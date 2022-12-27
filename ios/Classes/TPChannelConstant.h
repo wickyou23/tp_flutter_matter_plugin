@@ -20,5 +20,8 @@ extern NSString* const TPLightbulbEventChannelDomain;
 extern NSString* const TPLightbulbChannelDomain;
 extern NSString* const TPLightSwitchEventChannelDomain;
 extern NSString* const TPLightSwitchChannelDomain;
+extern NSString* const TPThermostatEventChannelDomain;
+extern NSString* const TPThermostatChannelDomain;
+
 
 NS_ASSUME_NONNULL_END

@@ -4,6 +4,7 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:tp_flutter_matter_package/models/tp_device.dart';
 import 'package:tp_flutter_matter_package_example/custom_widgets/device_widgets/tp_lighbulb_widget.dart';
 import 'package:tp_flutter_matter_package_example/custom_widgets/device_widgets/tp_lightbulb_dimmer_widget.dart';
+import 'package:tp_flutter_matter_package_example/custom_widgets/device_widgets/tp_thermostat_widget.dart';
 import 'package:tp_flutter_matter_package_example/managers/tp_device_manager.dart';
 
 class TPDeviceWidget extends StatefulWidget {
@@ -79,6 +80,9 @@ class _TPDeviceWidgetState extends State<TPDeviceWidget> {
             key: ValueKey(deviceId), device: deviceDetail);
       case TPDeviceType.kLightbulb:
         return TPLightBulbWidget(key: ValueKey(deviceId), device: deviceDetail);
+      case TPDeviceType.kThermostat:
+        return TPThermostatWidget(
+            key: ValueKey(deviceId), device: deviceDetail);
       default:
         return Container();
     }

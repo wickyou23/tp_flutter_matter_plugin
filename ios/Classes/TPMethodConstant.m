@@ -19,9 +19,18 @@ NSString* const TPMethodReadBindingDatasWithDeviceId = @"readBindingDatasWithDev
 //Basic
 NSString* const TPMethodTurnOnName = @"turnON";
 NSString* const TPMethodTurnOffName = @"turnOFF";
+NSString* const TPMethodSubscribeName = @"subscribeWithDeviceId";
 
 //Dimmer
 NSString* const TPMethodLevelControlName = @"controlLevel";
-NSString* const TPMethodSubscribeName = @"subscribeWithDeviceId";
 NSString* const TPMethodControlTemperatureColorName = @"controlTemperatureColor";
 NSString* const TPMethodcontrolHUEAndSaturationColorName = @"controlHUEAndSaturationColor";
+
+//Thermostat controlMinMaxForCoolMode
+NSString* const TPMethodControlSystemModeName = @"controlSystemMode";
+NSString* const TPMethodControlMinCoolName = @"controlMinCool";
+NSString* const TPMethodControlMaxCoolName = @"controlMaxCool";
+NSString* const TPMethodControlMinHeatName = @"controlMinHeat";
+NSString* const TPMethodControlMaxHeatName = @"controlMaxHeat";
+NSString* const TPMethodControlOccupiedCoolingName = @"controlOccupiedCooling";
+NSString* const TPMethodControlOccupiedHeatingName = @"controlOccupiedHeating";

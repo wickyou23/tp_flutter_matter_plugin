@@ -7,6 +7,7 @@
 #import "TPLightbulbDimmerChannel.h"
 #import "TPLightbulbChannel.h"
 #import "TPLightSwitchChannel.h"
+#import "TPThermostatChannel.h"
 
 //MARK: - TpFlutterMatterPackagePlugin
 
@@ -32,6 +33,7 @@
     [TPLightbulbDimmerChannel registerWithRegistrar:registrar];
     [TPLightbulbChannel registerWithRegistrar:registrar];
     [TPLightSwitchChannel registerWithRegistrar:registrar];
+    [TPThermostatChannel registerWithRegistrar:registrar];
 }
 
 @end

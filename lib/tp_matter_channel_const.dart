@@ -16,6 +16,9 @@ const tpLightSwitchEventChannelDomain =
     "tp.flutter.matter.event.lightSwitchChannel";
 const tpLightSwitchChannelDomain =
     "tp.flutter.matter.device.lightSwitchChannel";
+const tpThermostatEventChannelDomain =
+    "tp.flutter.matter.event.thermostatChannel";
+const tpThermostatChannelDomain = "tp.flutter.matter.device.thermostatChannel";
 
 //Event Keys
 const tpControlErrorKey = 'ControlErrorKey';

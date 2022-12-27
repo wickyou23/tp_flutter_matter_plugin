@@ -409,7 +409,7 @@ class _RenderTempurateColorSliderBox extends RenderBox {
           colorTemp = maxk - ((360 - i) * step);
         }
 
-        _colorTemps.add(_ColorExt.colorTempToRGB(colorTemp));
+        _colorTemps.add(ColorExt.colorTempToRGB(colorTemp));
       }
     }
 
@@ -453,7 +453,7 @@ class _RenderTempurateColorSliderBox extends RenderBox {
       }
     }
 
-    Paint thumbPaint = Paint()..color = _ColorExt.colorTempToRGB(_tempValue);
+    Paint thumbPaint = Paint()..color = ColorExt.colorTempToRGB(_tempValue);
     final center = size.center(Offset.zero);
     final currentRadian = _angleValue * (pi / 180);
     final dx = (r - paddingCircleCenter / 2) * cos(currentRadian) + center.dx;
@@ -671,7 +671,7 @@ class _RenderHUEColorSliderBox extends RenderBox {
   }
 }
 
-extension _ColorExt on Color {
+extension ColorExt on Color {
   static Color colorTempToRGB(double colorTemp) {
     final temp = colorTemp / 100;
 

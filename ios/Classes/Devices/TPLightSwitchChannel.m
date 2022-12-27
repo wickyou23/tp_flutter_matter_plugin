@@ -98,7 +98,7 @@
     
     void (^errorHandler)(NSError *) = ^(NSError * error) {
         typeof(self) strongSelf = weakSelf;
-        NSLog(@"Status: update reportAttributeMeasuredValue completed with error %@", [error description]);
+        NSLog(@"Status: update reportAttribute completed with error %@", [error description]);
         [TPDeviceChannelHelper sendReportErrorEventSink:strongSelf->eventSink
                                             andDeviceId:deviceId
                                             andEndpoint:NULL
